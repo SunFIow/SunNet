@@ -116,15 +116,17 @@ public class SimpleClient {
 				bQuit = true;
 			}
 		}
+		c.close();
 
 		Thread[] threads = new Thread[Thread.activeCount()];
 		int count = Thread.enumerate(threads);
-		System.out.println(count + " Threads are still alive");
+		Logger.debug("Client", count + " Threads are still alive");
 		for (int i = 0; i < count && i < threads.length; i++) {
-			System.out.println(threads[i]);
+			Logger.debug("Client", threads[i]);
 		}
 
-		System.out.println(System.nanoTime() + ": Shutting down Client");
+		Logger.debug("Client", "Shutting down");
+//		System.exit(0);
 	}
 
 }

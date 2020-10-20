@@ -1,8 +1,9 @@
 package com.sunflow.common;
 
 import java.io.IOException;
-import java.io.InvalidObjectException;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.List;
 
 import com.sunflow.common.Message.Header;
 import com.sunflow.util.Logger;
@@ -133,6 +134,8 @@ public class Connection<T> {
 	}
 
 	private static final String connectionReset = "Connection reset";
+	private static final String streamClosed = "Stream closed.";
+	private static final List<String> resetConnectionErrors = Arrays.asList(connectionReset, streamClosed);
 
 	/**
 	 * @ASYNC Prime context ready to read a message header
@@ -140,20 +143,7 @@ public class Connection<T> {
 	private void readHeader() {
 		m_context.async_read(m_socket,
 //				m_msgTemporaryIn,
-				(error, length, data) -> {
-					Message.Header<T> header = null;
-					if (!(data instanceof Message.Header)) {
-						InvalidObjectException ioe = new InvalidObjectException("Read object is not a message header but / " + (data != null ? data.getClass() + " - " + data : "NULL"));
-						if (error == null) error = ioe;
-						else error.addSuppressed(ioe);
-					} else {
-						try {
-							header = (Header<T>) data;
-						} catch (ClassCastException e) {
-							if (error == null) error = e;
-							else error.addSuppressed(e);
-						}
-					}
+				(Exception error, Integer length, Header<T> header) -> {
 					if (error == null) {
 						Logger.debug(Thread.currentThread(), "Read Header (" + length + ") / " + (header != null ? header.getClass() + " - " + header : "NULL"));
 						Message<T> m_msgTemporaryIn = new Message<>();
@@ -169,13 +159,14 @@ public class Connection<T> {
 						}
 					} else {
 						// Check if we got an Error because the Socket isn't connected anymore
-						if (error.getLocalizedMessage() == connectionReset) {
+						if (resetConnectionErrors.contains(error.getLocalizedMessage())) {
 							// ...it is so let's just log a small info
 							Logger.error("(" + id + ") Read Header Exception: " + error);
 						} else {
 							// We got an unknown Error so let's log a normal error
 							Logger.error("(" + id + ") Read Header Exception:", error);
 						}
+//						disconnect();
 						try {
 							m_socket.close();
 						} catch (IOException e) {
@@ -191,21 +182,7 @@ public class Connection<T> {
 	private void readBody(Message<T> msgWithHeader) {
 		m_context.async_read(m_socket,
 //							m_msgTemporaryIn,
-				(error, length, data) -> {
-					byte[] body = null;
-					if (!(data instanceof byte[])) {
-						InvalidObjectException ioe = new InvalidObjectException("Read object is not a message body but / " + (data != null ? data.getClass() + " - " + data : "NULL"));
-						if (error == null) error = ioe;
-						else error.addSuppressed(ioe);
-					} else {
-						try {
-							body = (byte[]) data;
-						} catch (ClassCastException e) {
-							if (error == null) error = e;
-							else error.addSuppressed(e);
-						}
-					}
-
+				(Exception error, Integer length, byte[] body) -> {
 					if (error == null) {
 						Logger.debug(Thread.currentThread(), "Read Body (" + length + ") / " + (body != null ? body.getClass() + " - " + body : "NULL"));
 						// A complete message body has been read
@@ -214,6 +191,7 @@ public class Connection<T> {
 						readHeader();
 					} else {
 						Logger.error("(" + id + ") Read Body Exception:", error);
+//						disconnect();
 						try {
 							m_socket.close();
 						} catch (IOException e) {

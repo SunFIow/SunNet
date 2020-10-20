@@ -5,6 +5,6 @@ public class Settings {
 	/*   */ logFatals = true,
 			logErrors = true,
 			logInfos = true,
-			logDebugs = true;
+			logDebugs = false;
 
 }
