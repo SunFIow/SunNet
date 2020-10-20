@@ -5,12 +5,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.rmi.ConnectIOException;
 
+import com.sunflow.common.CommonContext;
 import com.sunflow.common.Connection;
-import com.sunflow.common.Logger;
 import com.sunflow.common.Message;
-import com.sunflow.common.Side;
-import com.sunflow.common.TSQueue;
-import com.sunflow.common.ThreadContext;
+import com.sunflow.util.Logger;
+import com.sunflow.util.Side;
+import com.sunflow.util.TSQueue;
 
 public class Client {
 
@@ -38,7 +38,7 @@ public class Client {
 		/**
 		 * Context handels the data transfer...
 		 */
-		protected ThreadContext m_context;
+		protected CommonContext m_context;
 
 		/**
 		 * ...but needs a thread of its own to exectue its work commands
@@ -58,11 +58,6 @@ public class Client {
 
 		public Interface() {
 			m_qMessagesIn = new TSQueue<>();
-
-			// Create the acceptor whose purpose is to provide a unique socket
-//			 for each incoming connection attempt
-//			m_connector = new Connector(m_context);
-
 		}
 
 		/**
@@ -87,10 +82,10 @@ public class Client {
 				return false;
 			}
 
+			clientThreadGroup = new ThreadGroup(host + ":" + port + "/Client-Thread-Group");
+
 			// Create the context
 			m_context = new ClientContext(clientThreadGroup);
-
-			clientThreadGroup = new ThreadGroup(host + ":" + port + "/Client-Thread-Group");
 
 			m_context.async_connect(serverEndpoint, (error, socket) -> {
 //				SocketAddress clientEndpoint = socket.getLocalSocketAddress();
@@ -133,11 +128,11 @@ public class Client {
 //				m_threadContext.stop(); // TODO we want to stop the thread by a boolean variable instead
 
 				// ...and wait for it to die
-				Logger.info("CLIENT", "Wait 1000 ms for " + m_threadContext + " to die");
+				Logger.info("CLIENT", "Wait 3000 ms for " + m_threadContext + " to die");
 				long start = System.currentTimeMillis();
-				m_threadContext.join(1000);
+				m_threadContext.join(3000);
 				if (m_threadContext.isAlive()) {
-					Logger.info("CLIENT", m_threadContext + " is still alive after 1000 ms so we stop him now");
+					Logger.info("CLIENT", m_threadContext + " is still alive after 3000 ms so we stop him now");
 					m_threadContext.stop();
 				} else {
 					long now = System.currentTimeMillis();

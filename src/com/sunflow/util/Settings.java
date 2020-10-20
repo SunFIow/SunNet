@@ -1,10 +1,10 @@
-package com.sunflow.common;
+package com.sunflow.util;
 
-public class Constants {
+public class Settings {
 	public static final boolean
 	/*   */ logFatals = true,
 			logErrors = true,
 			logInfos = true,
-			logDebugs = false;
+			logDebugs = true;
 
 }

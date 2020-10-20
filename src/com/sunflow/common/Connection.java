@@ -5,6 +5,9 @@ import java.io.InvalidObjectException;
 import java.net.Socket;
 
 import com.sunflow.common.Message.Header;
+import com.sunflow.util.Logger;
+import com.sunflow.util.Side;
+import com.sunflow.util.TSQueue;
 
 public class Connection<T> {
 
@@ -16,7 +19,7 @@ public class Connection<T> {
 	/**
 	 * This context is shared with the whole instance
 	 */
-	protected ThreadContext m_context;
+	protected CommonContext m_context;
 
 	/**
 	 * This queue holds all mesages to be sent to the remote side
@@ -52,7 +55,7 @@ public class Connection<T> {
 	 * @param socket
 	 * @param qIn
 	 */
-	public Connection(Side parent, ThreadContext m_context, Socket socket, TSQueue<Message.Owned<T>> qIn) {
+	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<Message.Owned<T>> qIn) {
 		this.m_context = m_context;
 		this.m_socket = socket;
 		this.m_qMessagesIn = qIn;
@@ -96,9 +99,10 @@ public class Connection<T> {
 	}
 
 	public void disconnect() {
-		m_context.post(m_nOwnerType + "_connection_disconnect", () -> {
+		m_context.async_post(m_nOwnerType + "_connection_disconnect", () -> {
 			try {
 				m_socket.close();
+//				m_context.stop();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -114,7 +118,7 @@ public class Connection<T> {
 	 *        the target, for a client, the target is the server and vice versa
 	 */
 	public void send(final Message<T> msg) {
-		m_context.post(m_nOwnerType + "_connection_send", () -> {
+		m_context.async_post(m_nOwnerType + "_connection_send", () -> {
 			/*
 			 * If the queue has a message in it, then we must
 			 * assume that it is in the process of asynchronously being written.
@@ -139,7 +143,7 @@ public class Connection<T> {
 				(error, length, data) -> {
 					Message.Header<T> header = null;
 					if (!(data instanceof Message.Header)) {
-						InvalidObjectException ioe = new InvalidObjectException(System.nanoTime() + ": Read object is not a message header but / " + (data != null ? data.getClass() + " - " + data : "NULL"));
+						InvalidObjectException ioe = new InvalidObjectException("Read object is not a message header but / " + (data != null ? data.getClass() + " - " + data : "NULL"));
 						if (error == null) error = ioe;
 						else error.addSuppressed(ioe);
 					} else {
@@ -151,7 +155,7 @@ public class Connection<T> {
 						}
 					}
 					if (error == null) {
-						Logger.debug(System.nanoTime(), "Read Header (" + length + ") / " + (header != null ? header.getClass() + " - " + header : "NULL"));
+						Logger.debug(Thread.currentThread(), "Read Header (" + length + ") / " + (header != null ? header.getClass() + " - " + header : "NULL"));
 						Message<T> m_msgTemporaryIn = new Message<>();
 						// A complete message header has been read
 						m_msgTemporaryIn.header = header;
@@ -185,11 +189,6 @@ public class Connection<T> {
 	 * @ASYNC Prime context ready to read a message body
 	 */
 	private void readBody(Message<T> msgWithHeader) {
-		// allocate enough space in the message's body array
-//		m_msgTemporaryIn.resize(m_msgTemporaryIn.header.bodySize);
-//		m_context.async_readT(m_socket,
-////				m_msgTemporaryIn,
-//				(Exception error, Integer length, byte[] data) -> {
 		m_context.async_read(m_socket,
 //							m_msgTemporaryIn,
 				(error, length, data) -> {
@@ -208,7 +207,7 @@ public class Connection<T> {
 					}
 
 					if (error == null) {
-						Logger.debug(System.nanoTime(), "Read Body (" + length + ") / " + (body != null ? body.getClass() + " - " + body : "NULL"));
+						Logger.debug(Thread.currentThread(), "Read Body (" + length + ") / " + (body != null ? body.getClass() + " - " + body : "NULL"));
 						// A complete message body has been read
 						msgWithHeader.body = body;
 						addToIncomingMessageQueue(msgWithHeader);
@@ -231,7 +230,7 @@ public class Connection<T> {
 		m_context.async_write(m_socket,
 				m_qMessagesOut.front().header, m_qMessagesOut.front().sizeHeader(),
 				(error, length) -> {
-					Logger.debug("Wrote Header: " + length);
+					Logger.debug(Thread.currentThread(), "Wrote Header: " + length);
 					if (error == null) {
 						// A complete message header has been written, check if this message
 						// has a body to follow...
@@ -262,7 +261,7 @@ public class Connection<T> {
 		m_context.async_write(m_socket,
 				m_qMessagesOut.front().body, m_qMessagesOut.front().sizeBody(),
 				(error, length) -> {
-					Logger.debug(System.nanoTime(), "Wrote Body: " + length);
+					Logger.debug(Thread.currentThread(), "Wrote Body: " + length);
 					if (error == null) {
 						m_qMessagesOut.pop_front();
 						if (!m_qMessagesOut.empty()) {

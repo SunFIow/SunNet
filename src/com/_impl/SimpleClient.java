@@ -4,8 +4,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import com.sunflow.client.Client;
-import com.sunflow.common.Logger;
 import com.sunflow.common.Message;
+import com.sunflow.util.Logger;
 
 public class SimpleClient {
 
@@ -101,10 +101,10 @@ public class SimpleClient {
 				} else if (line.equals("all")) {
 					c.MessageAll();
 				} else if (line.equals("exit")) {
-					Logger.info("CLIENT IS GOING TO EXIT");
+					Logger.info("GOING TO EXIT");
 					bQuit = true;
 				} else if (line.equals("exit2")) {
-					Logger.info("CLIENT IS GOING TO EXIT BY 2");
+					Logger.info("CLIENT IS GOING TO CLOSE");
 					c.close();
 				}
 			}
@@ -116,6 +116,14 @@ public class SimpleClient {
 				bQuit = true;
 			}
 		}
+
+		Thread[] threads = new Thread[Thread.activeCount()];
+		int count = Thread.enumerate(threads);
+		System.out.println(count + " Threads are still alive");
+		for (int i = 0; i < count && i < threads.length; i++) {
+			System.out.println(threads[i]);
+		}
+
 		System.out.println(System.nanoTime() + ": Shutting down Client");
 	}
 

@@ -5,9 +5,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 import com.sunflow.common.Connection;
-import com.sunflow.common.Logger;
 import com.sunflow.common.Message;
 import com.sunflow.server.Server;
+import com.sunflow.util.Logger;
 
 public class SimpleServer {
 

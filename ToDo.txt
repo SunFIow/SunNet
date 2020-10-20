@@ -1,0 +1,2 @@
+# CommonContext 
+	## // Make TaskThreads check an boolean from time to time to see if they should stop

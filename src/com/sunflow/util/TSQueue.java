@@ -1,4 +1,4 @@
-package com.sunflow.common;
+package com.sunflow.util;
 
 import java.util.ArrayDeque;
 import java.util.Deque;

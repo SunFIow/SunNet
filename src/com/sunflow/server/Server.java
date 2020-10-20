@@ -9,12 +9,12 @@ import java.rmi.ConnectIOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import com.sunflow.common.CommonContext;
 import com.sunflow.common.Connection;
-import com.sunflow.common.Logger;
 import com.sunflow.common.Message;
-import com.sunflow.common.Side;
-import com.sunflow.common.TSQueue;
-import com.sunflow.common.ThreadContext;
+import com.sunflow.util.Logger;
+import com.sunflow.util.Side;
+import com.sunflow.util.TSQueue;
 
 public class Server {
 
@@ -52,7 +52,7 @@ public class Server {
 		/**
 		 * Order of declaration is important - it is also the order of initialisation
 		 */
-		protected ThreadContext m_context;
+		protected CommonContext m_context;
 
 		/**
 		 * Thread to execute all async work on
@@ -91,10 +91,6 @@ public class Server {
 			m_deqConnections = new ArrayDeque<>();
 
 			serverThreadGroup = new ThreadGroup(endpoint.getPort() + "/Server-Thread-Group");
-
-			// Create the acceptor whose purpose is to provide a unique socket
-			// for each incoming connection attempt
-//			m_acceptor = new Acceptor(m_context, endpoint);
 
 			// Create the context
 			m_context = new ServerContext(serverThreadGroup, endpoint);
@@ -201,9 +197,7 @@ public class Server {
 				client.send(msg);
 			else {
 				// The client couldn't be contacted, so assume it has disconnected.
-				onClientDisconnect(client);
-				m_deqConnections.remove(client); // TODO delete client
-				client.disconnect();
+				clientDisconnected(client);
 			}
 		}
 
@@ -232,9 +226,7 @@ public class Server {
 						client.send(msg);
 				} else {
 					// The client couldn't be contacted, so assume it has disconnected.
-					onClientDisconnect(client);
-					m_deqConnections.remove(client); // TODO delete client
-					client.disconnect();
+					clientDisconnected(client);
 				}
 			}
 		}
@@ -260,6 +252,18 @@ public class Server {
 
 				messageCount++;
 			}
+		}
+
+		/**
+		 * Called when a client couldn't be contacted, so we assume it has disconnected.
+		 * 
+		 * @param client
+		 *            that couldn't be contacted
+		 */
+		private void clientDisconnected(Connection<T> client) {
+			onClientDisconnect(client);
+			m_deqConnections.remove(client); // TODO delete client
+			client.disconnect();
 		}
 
 		/**

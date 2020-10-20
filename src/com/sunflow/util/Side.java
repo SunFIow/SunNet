@@ -1,4 +1,4 @@
-package com.sunflow.common;
+package com.sunflow.util;
 
 public enum Side {
 	server,

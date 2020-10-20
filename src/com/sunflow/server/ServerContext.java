@@ -6,11 +6,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.function.BiConsumer;
 
-import com.sunflow.common.Logger;
-import com.sunflow.common.Side;
-import com.sunflow.common.ThreadContext;
+import com.sunflow.common.CommonContext;
+import com.sunflow.util.Logger;
+import com.sunflow.util.Side;
 
-public class ServerContext extends ThreadContext {
+public class ServerContext extends CommonContext {
 
 	private ServerSocket serverSocket;
 
@@ -27,7 +27,7 @@ public class ServerContext extends ThreadContext {
 
 	@Override
 	public void async_accept(BiConsumer<IOException, Socket> socketConsumer) {
-		post("servercontext_async_accept", () -> {
+		async_post("servercontext_async_accept", () -> {
 			Socket socket = null;
 			IOException error = null;
 			try {
@@ -50,6 +50,6 @@ public class ServerContext extends ThreadContext {
 	public void close() throws IOException {
 		Logger.debug("ServerContext", "close()");
 		super.close();
-		serverSocket.close();
+//		serverSocket.close();
 	}
 }

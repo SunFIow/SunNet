@@ -1,4 +1,4 @@
-package com.sunflow.common;
+package com.sunflow.util;
 
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
@@ -11,22 +11,22 @@ public class Logger {
 	 */
 
 	public static void fatal(Object msg) {
-		if (!Constants.logFatals) return;
+		if (!Settings.logFatals) return;
 		log(System.err, "FATAL", msg);
 	}
 
 	public static void error(Object msg) {
-		if (!Constants.logErrors) return;
+		if (!Settings.logErrors) return;
 		log(System.err, "ERROR", msg);
 	}
 
 	public static void info(Object msg) {
-		if (!Constants.logInfos) return;
+		if (!Settings.logInfos) return;
 		log(System.out, "INFO", msg);
 	}
 
 	public static void debug(Object msg) {
-		if (!Constants.logDebugs) return;
+		if (!Settings.logDebugs) return;
 		log(System.out, "DEBUG", msg);
 	}
 
@@ -35,22 +35,22 @@ public class Logger {
 	 */
 
 	public static void fatal(Object marker, Object msg) {
-		if (!Constants.logFatals) return;
+		if (!Settings.logFatals) return;
 		log(System.err, "FATAL", marker, msg);
 	}
 
 	public static void error(Object marker, Object msg) {
-		if (!Constants.logErrors) return;
+		if (!Settings.logErrors) return;
 		log(System.err, "ERROR", marker, msg);
 	}
 
 	public static void info(Object marker, Object msg) {
-		if (!Constants.logInfos) return;
+		if (!Settings.logInfos) return;
 		log(System.out, "INFO", marker, msg);
 	}
 
 	public static void debug(Object marker, Object msg) {
-		if (!Constants.logDebugs) return;
+		if (!Settings.logDebugs) return;
 		log(System.out, "DEBUG", marker, msg);
 	}
 
@@ -59,13 +59,13 @@ public class Logger {
 	 */
 
 	public static void fatal(Object msg, Throwable error) {
-		if (!Constants.logFatals) return;
+		if (!Settings.logFatals) return;
 		log(System.err, "FATAL", msg);
 		error.printStackTrace();
 	}
 
 	public static void error(Object msg, Throwable error) {
-		if (!Constants.logErrors) return;
+		if (!Settings.logErrors) return;
 		log(System.err, "ERROR", msg);
 		error.printStackTrace();
 	}
@@ -75,13 +75,13 @@ public class Logger {
 	 */
 
 	public static void fatal(Object marker, Object msg, Throwable error) {
-		if (!Constants.logFatals) return;
+		if (!Settings.logFatals) return;
 		log(System.err, "FATAL", marker, msg);
 		error.printStackTrace();
 	}
 
 	public static void error(Object marker, Object msg, Throwable error) {
-		if (!Constants.logErrors) return;
+		if (!Settings.logErrors) return;
 		log(System.err, "ERROR", marker, msg);
 		error.printStackTrace();
 	}

@@ -5,11 +5,11 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.function.BiConsumer;
 
-import com.sunflow.common.Logger;
-import com.sunflow.common.Side;
-import com.sunflow.common.ThreadContext;
+import com.sunflow.common.CommonContext;
+import com.sunflow.util.Logger;
+import com.sunflow.util.Side;
 
-public class ClientContext extends ThreadContext {
+public class ClientContext extends CommonContext {
 
 	private Socket socket;
 
@@ -25,7 +25,7 @@ public class ClientContext extends ThreadContext {
 	@Override
 	public void async_connect(InetSocketAddress serverEndpoint,
 			BiConsumer<IOException, Socket> consumer) {
-		post("clientcontext_async_connect", () -> {
+		async_post("clientcontext_async_connect", () -> {
 			IOException error = null;
 			try {
 				// Create Socket
@@ -44,6 +44,6 @@ public class ClientContext extends ThreadContext {
 	public void close() throws IOException {
 		Logger.debug("ClientContext", "close()");
 		super.close();
-		socket.close();
+//		socket.close();
 	}
 }
