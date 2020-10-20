@@ -2,8 +2,6 @@ package com.sunflow.common;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Arrays;
-import java.util.List;
 
 import com.sunflow.common.Message.Header;
 import com.sunflow.util.Logger;
@@ -92,9 +90,8 @@ public class Connection<T> {
 	 * @param uid
 	 *            the unique id for this connection
 	 */
-	public void connectToServer(int uid) {
+	public void connectToServer() {
 		if (m_nOwnerType == Side.client && isConnected()) {
-			id = uid;
 			readHeader();
 		}
 	}
@@ -133,10 +130,6 @@ public class Connection<T> {
 		});
 	}
 
-	private static final String connectionReset = "Connection reset";
-	private static final String streamClosed = "Stream closed.";
-	private static final List<String> resetConnectionErrors = Arrays.asList(connectionReset, streamClosed);
-
 	/**
 	 * @ASYNC Prime context ready to read a message header
 	 */
@@ -159,13 +152,7 @@ public class Connection<T> {
 						}
 					} else {
 						// Check if we got an Error because the Socket isn't connected anymore
-						if (resetConnectionErrors.contains(error.getLocalizedMessage())) {
-							// ...it is so let's just log a small info
-							Logger.error("(" + id + ") Read Header Exception: " + error);
-						} else {
-							// We got an unknown Error so let's log a normal error
-							Logger.error("(" + id + ") Read Header Exception:", error);
-						}
+						Logger.error("(" + id + ") Read Header Exception: " + error);
 //						disconnect();
 						try {
 							m_socket.close();

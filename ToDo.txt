@@ -1,2 +1,5 @@
-# CommonContext 
-	## // Make TaskThreads check an boolean from time to time to see if they should stop
+# ServerContext
+	## Remove cached streams of disconnected Sockets
+	
+# SimpleClient 
+	## Make interaction via keypresses not console input

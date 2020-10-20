@@ -1,6 +1,5 @@
 package com._impl;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
@@ -13,27 +12,23 @@ public class SimpleServer {
 
 	class CustomServer extends Server.Interface<CustomMsgTypes> {
 
-		public CustomServer(int port) throws IOException { super(port); }
+		public CustomServer() { super(); }
 
-		public CustomServer(String host, int port) throws IOException { super(host, port); }
+		public CustomServer(int port) { super(port); }
 
-		public CustomServer(InetAddress host, int port) throws IOException { super(host, port); }
+		public CustomServer(String host, int port) { super(host, port); }
 
-		public CustomServer(InetSocketAddress endpoint) throws IOException { super(endpoint); }
+		public CustomServer(InetAddress host, int port) { super(host, port); }
+
+		public CustomServer(InetSocketAddress endpoint) { super(endpoint); }
 
 		@Override
-		protected boolean onClientConnect(Connection<CustomMsgTypes> client) {
+		protected boolean onClientConnect(Connection<CustomMsgTypes> client, int clientID) {
 			// Accept every connection
 			boolean accept = true;
-
-			Message<CustomMsgTypes> msg = new Message<>();
-			if (accept) msg.header.id = CustomMsgTypes.ServerAccept;
-			else msg.header.id = CustomMsgTypes.ServerDeny;
-
-			msg.push(client.getID());
-
+			Message<CustomMsgTypes> msg = new Message<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+			msg.push(clientID);
 			client.send(msg);
-
 			return accept;
 		}
 
@@ -69,31 +64,31 @@ public class SimpleServer {
 
 	public SimpleServer() {
 		CustomServer server = null;
-		try {
-			server = new CustomServer(PrivateInfo.PORT);
 
-//			server = new CustomServer(PrivateInfo.localhost, PrivateInfo.PORT);
-//			server = new CustomServer(PrivateInfo.localhostIP, PrivateInfo.PORT);
+		server = new CustomServer(PrivateInfo.PORT);
+//		server = new CustomServer();
 
-//			server = new CustomServer(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
-//			server = new CustomServer(PrivateInfo.localPcIPv6, PrivateInfo.PORT);
+//		server = new CustomServer(PrivateInfo.localhost, PrivateInfo.PORT);
+//		server = new CustomServer(PrivateInfo.localhostIP, PrivateInfo.PORT);
+//
+//		server = new CustomServer(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
+//		server = new CustomServer(PrivateInfo.localPcIPv6, PrivateInfo.PORT);
+//
+//		server = new CustomServer(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
+//
+//		server = new CustomServer(PrivateInfo.routerIP4, PrivateInfo.PORT);
+//		server = new CustomServer(PrivateInfo.routerIP6, PrivateInfo.PORT);
+//
+//		server = new CustomServer(PrivateInfo.subdomain, PrivateInfo.PORT);
+//		server = new CustomServer(PrivateInfo.domain, PrivateInfo.PORT);
 
-//			server = new CustomServer(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
+		boolean started = server.start();
 
-//			server = new CustomServer(PrivateInfo.routerIP4, PrivateInfo.PORT);
-//			server = new CustomServer(PrivateInfo.routerIP6, PrivateInfo.PORT);
-
-//			server = new CustomServer(PrivateInfo.subdomain, PrivateInfo.PORT);
-//			server = new CustomServer(PrivateInfo.domain, PrivateInfo.PORT);
-
-			server.start();
-
-			while (true) {
-				server.update();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+		while (server.isRunning()) {
+			server.update();
 		}
+
+		server.close();
 	}
 
 }

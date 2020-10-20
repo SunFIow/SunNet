@@ -9,10 +9,6 @@ import com.sunflow.util.Logger;
 
 public class SimpleClient {
 
-	// TODO Make Client ShutDown
-	// when Server is not aAvaiable anymore
-	// and exit got typed
-
 	class CustomClient extends Client.Interface<CustomMsgTypes> {
 
 		public void PingServer() {
@@ -103,9 +99,6 @@ public class SimpleClient {
 				} else if (line.equals("exit")) {
 					Logger.info("GOING TO EXIT");
 					bQuit = true;
-				} else if (line.equals("exit2")) {
-					Logger.info("CLIENT IS GOING TO CLOSE");
-					c.close();
 				}
 			}
 
@@ -125,7 +118,7 @@ public class SimpleClient {
 			Logger.debug("Client", threads[i]);
 		}
 
-		Logger.debug("Client", "Shutting down");
+		Logger.info("Client", "Shutting down");
 //		System.exit(0);
 	}
 

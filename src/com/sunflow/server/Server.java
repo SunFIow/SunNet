@@ -4,7 +4,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.rmi.ConnectIOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -64,45 +63,178 @@ public class Server {
 		 */
 		protected int nIDCounter = 10000;
 
+		public Interface() {
+			m_qMessagesIn = new TSQueue<>();
+			m_deqConnections = new ArrayDeque<>();
+		}
+
 		/**
-		 * Creates a server, bound to the specified port.
-		 * A port numberof 0 means that the port number is automaticallyallocated,
-		 * typically from an ephemeral port range.
+		 * Creates a server without starting, bound to the specified port. A port number
+		 * of {@code 0} means that the port number is automatically
+		 * allocated, typically from an ephemeral port range.
 		 * 
 		 * @param port
-		 *            The port number, or 0 to use a portnumber that is automatically allocated.
-		 * @throws UnknownHostException
-		 * @throws IOException
+		 *            the port number, or {@code 0} to use a port
+		 *            number that is automatically allocated.
 		 */
-		public Interface(int port) throws IOException {
+		public Interface(int port) {
 			this(new InetSocketAddress(port));
 		}
 
-		public Interface(String host, int port) throws IOException {
+		/**
+		 * Creates a server without starting, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * If the address is {@code null}, then the system will pick up
+		 * an ephemeral port and a valid local address to bind the socket.
+		 * 
+		 * @param host
+		 *            The hostname/ip-address to bind to
+		 * @param port
+		 *            the port number, or {@code 0} to use a port
+		 *            number that is automatically allocated.
+		 */
+		public Interface(String host, int port) {
 			this(new InetSocketAddress(host, port));
-		}
-
-		public Interface(InetAddress host, int port) throws IOException {
-			this(new InetSocketAddress(host, port));
-		}
-
-		public Interface(InetSocketAddress endpoint) throws IOException {
-			m_qMessagesIn = new TSQueue<>();
-			m_deqConnections = new ArrayDeque<>();
-
-			serverThreadGroup = new ThreadGroup(endpoint.getPort() + "/Server-Thread-Group");
-
-			// Create the context
-			m_context = new ServerContext(serverThreadGroup, endpoint);
 		}
 
 		/**
-		 * Starts the server
+		 * Creates a server without starting, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * If the address is {@code null}, then the system will pick up
+		 * an ephemeral port and a valid local address to bind the socket.
+		 * 
+		 * @param host
+		 *            The ip-address to bind to
+		 * @param port
+		 *            the port number, or {@code 0} to use a port
+		 *            number that is automatically allocated.
+		 */
+		public Interface(InetAddress host, int port) {
+			this(new InetSocketAddress(host, port));
+		}
+
+		/**
+		 * Creates a server without starting, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * If the address is {@code null}, then the system will pick up
+		 * an ephemeral port and a valid local address to bind the socket.
+		 * 
+		 * @param endpoint
+		 *            The ip-address and port number to bind to.
+		 */
+		public Interface(InetSocketAddress endpoint) {
+			this();
+			create(endpoint);
+		}
+
+		/**
+		 * Creates a server, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * If the address is {@code null}, then the system will pick up
+		 * an ephemeral port and a valid local address to bind the socket.
+		 * 
+		 * @param endpoint
+		 *            The ip-address and port number to bind to.
 		 * 
 		 * @return If the server started without errors
 		 */
+		private boolean create(InetSocketAddress endpoint) {
+			serverThreadGroup = new ThreadGroup(endpoint.getPort() + "/Server-Thread-Group");// Create the context
+
+			try {
+				m_context = new ServerContext(serverThreadGroup, endpoint);
+			} catch (IOException e) {
+				Logger.fatal("SERVER", "Starting Error:", e);
+				return false;
+			}
+			return true;
+		}
+
+		/**
+		 * Creates and starts a server, bound to the specified port. A port number
+		 * of {@code 0} means that the port number is automatically
+		 * allocated, typically from an ephemeral port range.
+		 * 
+		 * @param port
+		 *            the port number, or {@code 0} to use a port
+		 *            number that is automatically allocated.
+		 * 
+		 * @return If the server started without errors
+		 */
+		public boolean start(int port) {
+			return start(new InetSocketAddress(port));
+		}
+
+		/**
+		 * Creates and starts a server, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * A port number of {@code 0} means that the port number is automatically
+		 * allocated, typically from an ephemeral port range.
+		 * 
+		 * @param host
+		 *            The hostname/ip-address to bind to
+		 * @param port
+		 *            the port number, or {@code 0} to use a port
+		 *            number that is automatically allocated.
+		 * 
+		 * @return If the server started without errors
+		 */
+		public boolean start(String host, int port) {
+			return start(new InetSocketAddress(host, port));
+		}
+
+		/**
+		 * Creates and starts a server, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * If the address is {@code null}, then the system will pick up
+		 * an ephemeral port and a valid local address to bind the socket.
+		 * 
+		 * @param host
+		 *            The ip-address to bind to
+		 * @param port
+		 *            the port number, or {@code 0} to use a port
+		 *            number that is automatically allocated.
+		 * 
+		 * @return If the server started without errors
+		 */
+		public boolean start(InetAddress host, int port) {
+			return start(new InetSocketAddress(host, port));
+		}
+
+		/**
+		 * Creates and starts a server, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * If the address is {@code null}, then the system will pick up
+		 * an ephemeral port and a valid local address to bind the socket.
+		 * 
+		 * @param endpoint
+		 *            The ip-address and port number to bind to.
+		 * 
+		 * @return If the server started without errors
+		 */
+		public boolean start(InetSocketAddress endpoint) {
+			boolean error = create(endpoint);
+
+			if (error) return false;
+
+			start();
+			return true;
+		}
+
 		public boolean start() {
 			Logger.info("SERVER", "Starting...");
+
+			if (m_context == null) {
+				Logger.error("SERVER", "Can't start a server that isn't created yet\ncall start(int), start(String,int), start(InetAddress,int) or start(InetSocketAddress) instead!");
+				return false;
+			}
 
 			/*
 			 * Issue a task to the context - This is important
@@ -128,22 +260,42 @@ public class Server {
 		 * Stops the server but does not close it
 		 */
 		public void stop() {
+			if (!isRunning()) return;
+			// Request the context to close
+			m_context.close();
+
 			try {
-				// Request the context to close
-				m_context.close();
+				Logger.debug("SERVER", "Wait 3000 ms for " + m_threadContext + " to die");
+				long start = System.currentTimeMillis();
 				// ...and wait for it to die
-				m_threadContext.join();
-			} catch (InterruptedException | IOException e) {
-				// Some thread has interrupted the m_threadContext
-				Logger.error("SERVER", "Stop Error:", e);
+				m_threadContext.join(3000);
+				if (m_threadContext.isAlive()) {
+					Logger.debug("SERVER", m_threadContext + " is still alive after 3000 ms so we stop him now");
+					m_threadContext.stop();
+				} else {
+					long now = System.currentTimeMillis();
+					Logger.debug("SERVER", m_threadContext + " died after: " + (now - start) + " ms");
+				}
+			} catch (InterruptedException e) {
+				Logger.error("SERVER", Thread.currentThread() + " got interrupted while waiting for " + m_threadContext + " to die", e);
 			}
+
 			Logger.info("SERVER", "Stopped!");
+		}
+
+		public boolean isCreated() {
+			return m_context != null;
+		}
+
+		public boolean isRunning() {
+			return isCreated() && m_context.isRunning();
 		}
 
 		/**
 		 * ASYNC - Instrict asio to wait for connection
 		 */
 		public void waitForClientConnection() {
+			if (!isCreated()) return;
 			/*
 			 * Prime context with an instruction to wait until a socket connects. This
 			 * is the purpose of an "acceptor" object. It will provide a unique socket
@@ -158,7 +310,7 @@ public class Server {
 					Connection<T> newconn = new Connection<>(Side.server, m_context, socket, m_qMessagesIn);
 
 					// Give the server impl a chance to deny connection
-					if (onClientConnect(newconn)) {
+					if (onClientConnect(newconn, nIDCounter)) {
 						// Connection allowed, so add to container of new connections
 						m_deqConnections.offerLast(newconn);
 
@@ -197,7 +349,7 @@ public class Server {
 				client.send(msg);
 			else {
 				// The client couldn't be contacted, so assume it has disconnected.
-				clientDisconnected(client);
+				clientNotConnected(client);
 			}
 		}
 
@@ -226,7 +378,7 @@ public class Server {
 						client.send(msg);
 				} else {
 					// The client couldn't be contacted, so assume it has disconnected.
-					clientDisconnected(client);
+					clientNotConnected(client);
 				}
 			}
 		}
@@ -260,9 +412,9 @@ public class Server {
 		 * @param client
 		 *            that couldn't be contacted
 		 */
-		private void clientDisconnected(Connection<T> client) {
+		private void clientNotConnected(Connection<T> client) {
 			onClientDisconnect(client);
-			m_deqConnections.remove(client); // TODO delete client
+			m_deqConnections.remove(client);
 			client.disconnect();
 		}
 
@@ -274,7 +426,7 @@ public class Server {
 		 *            The connecting client
 		 * @return true to allow the connection, false to deny the connection
 		 */
-		protected boolean onClientConnect(Connection<T> client) { return false; }
+		protected boolean onClientConnect(Connection<T> client, int clientID) { return false; }
 
 		/**
 		 * Called when a client appears to have disconnected

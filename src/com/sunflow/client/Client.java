@@ -1,7 +1,7 @@
 package com.sunflow.client;
 
 import java.io.Closeable;
-import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.rmi.ConnectIOException;
 
@@ -61,43 +61,66 @@ public class Client {
 		}
 
 		/**
-		 * Connect to server with hostname/ip-address and port between 0 and 65535
+		 * Connect to server
 		 * 
 		 * @param host
-		 *            The hostname/ip-address
+		 *            The hostname/ip-address of the server
 		 * @param port
-		 *            The port number
+		 *            The port number of the server, between 0 and 65535
 		 */
 
-		public boolean connect(final String host, final int port) {
-			Logger.info("CLIENT", "Connecting...");
-
+		public boolean connect(String host, int port) {
 			// Resolve hostname/ip-address into tangible physical address
 			InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
+			return connect(serverEndpoint);
+		}
+
+		/**
+		 * Connect to server
+		 * 
+		 * @param host
+		 *            The ip-address of the server
+		 * @param port
+		 *            The port number of the server, between 0 and 65535
+		 */
+
+		public boolean connect(InetAddress host, int port) {
+			// Resolve hostname/ip-address into tangible physical address
+			InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
+			return connect(serverEndpoint);
+		}
+
+		/**
+		 * Connect to server
+		 * 
+		 * @param endpoint
+		 *            InetSocketAddress of the server, between 0 and 65535
+		 */
+		public boolean connect(InetSocketAddress endpoint) {
+			Logger.info("CLIENT", "Connecting...");
 
 			// Throw Exception if it hostname/ip-address could't get resolved
-			if (serverEndpoint.isUnresolved()) {
-				Logger.fatal("CLIENT", "Connecting Exception:");
-				new ConnectIOException("The hostname/ip-address[" + host + "] with port[" + port + "] couldn't get resolved!").printStackTrace();
+			if (endpoint.isUnresolved()) {
+				Logger.fatal("CLIENT", "Connecting Exception:",
+						new ConnectIOException("The endpoint [" + endpoint + "] couldn't get resolved!"));
 				return false;
 			}
 
-			clientThreadGroup = new ThreadGroup(host + ":" + port + "/Client-Thread-Group");
+			clientThreadGroup = new ThreadGroup(endpoint + "/Client-Thread-Group");
 
 			// Create the context
 			m_context = new ClientContext(clientThreadGroup);
 
-			m_context.async_connect(serverEndpoint, (error, socket) -> {
+			m_context.async_connect(endpoint, (error, socket) -> {
 //				SocketAddress clientEndpoint = socket.getLocalSocketAddress();
 				if (error == null) {
-					Logger.info("CLIENT", "Succesfully conntected to (" + serverEndpoint + ")");
+					Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
 
 					m_connection = new Connection<>(Side.client, m_context, socket, m_qMessagesIn);
 
-					m_connection.connectToServer(4711); // TODO the uid
+					m_connection.connectToServer();
 				} else {
-					Logger.fatal("CLIENT", "Connecting Error: ");
-					new ConnectIOException("Couldn't connect to " + serverEndpoint, error).printStackTrace();
+					Logger.fatal("CLIENT", "Connecting Error:", error);
 				}
 			});
 
@@ -122,25 +145,23 @@ public class Client {
 				m_connection.disconnect();
 			}
 
-			try {
-				// Either way we're also done with the thread, we stop it...
-				m_context.stop();
-//				m_threadContext.stop(); // TODO we want to stop the thread by a boolean variable instead
+			// Either way we're also done with the thread, we stop it...
+			m_context.stop();
 
-				// ...and wait for it to die
-				Logger.info("CLIENT", "Wait 3000 ms for " + m_threadContext + " to die");
+			try {
+				Logger.debug("CLIENT", "Wait 3000 ms for " + m_threadContext + " to die");
 				long start = System.currentTimeMillis();
+				// ...and wait for it to die
 				m_threadContext.join(3000);
 				if (m_threadContext.isAlive()) {
-					Logger.info("CLIENT", m_threadContext + " is still alive after 3000 ms so we stop him now");
+					Logger.debug("CLIENT", m_threadContext + " is still alive after 3000 ms so we stop him now");
 					m_threadContext.stop();
 				} else {
 					long now = System.currentTimeMillis();
-					Logger.info("CLIENT", m_threadContext + " died after: " + (now - start) + " ms");
+					Logger.debug("CLIENT", m_threadContext + " died after: " + (now - start) + " ms");
 				}
-
-			} catch (IOException | InterruptedException e) {
-				e.printStackTrace();
+			} catch (InterruptedException e) {
+				Logger.error("CLIENT", Thread.currentThread() + " got interrupted while waiting for " + m_threadContext + " to die", e);
 			}
 		}
 

@@ -1,2 +1,2 @@
-# SunNet v0.1.0
+# SunNet v0.2.0
  
