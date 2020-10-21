@@ -15,7 +15,6 @@ import java.util.function.Predicate;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
-import com.sunflow.util.TriConsumer;
 
 public abstract class CommonContext implements Runnable, Closeable {
 
@@ -50,9 +49,8 @@ public abstract class CommonContext implements Runnable, Closeable {
 	public abstract void async_connect(InetSocketAddress serverEndpoint,
 			BiConsumer<IOException, Socket> consumer);
 
-	public <T extends Serializable> void async_write(Socket socket,
-			T data, int length,
-			BiConsumer<IOException, Integer> consumer) {
+	public <T extends Serializable> void async_write(Socket socket, T data,
+			Consumer<IOException> consumer) {
 		async_post(side + "_context_async_write", () -> {
 			IOException error = null;
 			try {
@@ -61,14 +59,13 @@ public abstract class CommonContext implements Runnable, Closeable {
 //				ObjectOutputStream oos = new ObjectOutputStream(bos);
 				ObjectOutputStream oos = getObjectOutputStream(socket);
 
-				oos.writeInt(length);
 				oos.writeObject(data);
 
 				oos.flush();
 			} catch (IOException e) {
 				error = e;
 			} finally {
-				consumer.accept(error, length);
+				consumer.accept(error);
 			}
 		});
 	}
@@ -79,9 +76,8 @@ public abstract class CommonContext implements Runnable, Closeable {
 
 	@SuppressWarnings("unchecked")
 	public <T> void async_read(Socket socket,
-			TriConsumer<Exception, Integer, T> consumer) {
+			BiConsumer<Exception, T> consumer) {
 		async_post(side + "_context_async_read", () -> {
-			int length = -1;
 			T data = null;
 			Exception error = null;
 			try {
@@ -91,7 +87,6 @@ public abstract class CommonContext implements Runnable, Closeable {
 
 				ObjectInputStream ois = getObjectInputStream(socket);
 
-				length = ois.readInt();
 				data = (T) ois.readObject();
 			} catch (ClassCastException e) {
 				e.addSuppressed(new InvalidObjectException(
@@ -102,7 +97,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 			} catch (ClassNotFoundException | IOException e) {
 				error = e;
 			} finally {
-				consumer.accept(error, length, data);
+				consumer.accept(error, data);
 			}
 		});
 	}

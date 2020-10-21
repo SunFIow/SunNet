@@ -1,6 +1,7 @@
 package com.sunflow.client;
 
 import java.io.Closeable;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.rmi.ConnectIOException;
@@ -18,7 +19,7 @@ public class Client {
 	 * @param <T>
 	 *            The type of messages
 	 */
-	public static class Interface<T> implements Closeable {
+	public static class Interface<T extends Serializable> implements Closeable {
 
 		/**
 		 * If the client is destroyed, always try and disconnect from server

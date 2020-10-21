@@ -31,7 +31,7 @@ public class SimpleClient {
 
 		@Override
 		protected void onMessage(Message<CustomMsgTypes> msg) {
-			switch (msg.header.id) {
+			switch (msg.id()) {
 				case ServerAccept:
 					// Server has responded to a ping request
 					Logger.info("Client", "Server Accepted Connection, your UID (" + msg.pop() + ")");
