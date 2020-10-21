@@ -15,12 +15,10 @@ public class SimpleClient {
 			Message<CustomMsgTypes> msg = new Message<>(CustomMsgTypes.ServerPing);
 
 			long timeNow = System.currentTimeMillis();
-
 			msg.push(timeNow);
-//			System.out.println("Send Ping Message to Server");
+
 			Logger.debug("Client", "Send Ping Message to Server");
 			send(msg);
-//			System.out.println("Send Message");
 			Logger.debug("Client", "Send Message");
 		}
 

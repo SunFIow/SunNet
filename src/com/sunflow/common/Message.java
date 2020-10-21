@@ -1,7 +1,11 @@
 package com.sunflow.common;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayDeque;
+import java.util.Iterator;
 
 public class Message<T extends Serializable> implements Serializable {
 	private static final long serialVersionUID = 5130385395145010707L;
@@ -10,84 +14,81 @@ public class Message<T extends Serializable> implements Serializable {
 	 * Message Header is sent at start of all messages. The template allows us
 	 * to use "enum class" to ensure that the messages are valid a compile time
 	 */
-	public static class Header<T> implements Serializable {
-		private static final long serialVersionUID = -2532418061029867801L;
 
-		public T id = null;
-		public int bodySize = 0;
-
-		@Override
-		public String toString() {
-			return "ID: " + id + ", Size:" + bodySize;
-		}
-	}
-
-	private Header<T> header;
+	private T id;
 	private ArrayDeque<Serializable> body;
 
-	public Message() {
-		header = new Header<>();
-		body = new ArrayDeque<>();
-	}
+	public Message() { body = new ArrayDeque<>(); }
 
 	public Message(T id) {
 		this();
-		this.header.id = id;
-	}
-
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		for (Object o : body) builder.append(o);
-		String s = builder.toString();
-		return "Header{" + header + "}" + "\n" +
-				"Body{" + s + "}";
+		this.id = id;
 	}
 
 	/**
 	 * @return the id of this message
 	 */
-	public T id() {
-		return header.id;
-	}
+	public T id() { return id; }
 
 	/**
 	 * @return the number of elements in the body
 	 */
-	public int size() {
-		return body.size();
-	}
-
-	/**
-	 * @return the header of this message
-	 */
-	public Header<T> header() {
-		return header;
-	}
+	public int size() { return body.size(); }
 
 	/**
 	 * @return the data of this message
 	 */
-	public ArrayDeque<Serializable> data() {
-		return body;
-	}
+	public ArrayDeque<Serializable> data() { return body; }
 
 	/**
-	 * Set the header of this message
+	 * Set the id of this message
 	 * 
-	 * @param header
+	 * @param id
 	 */
-	public void setHeader(Header<T> header) {
-		this.header = header;
-	}
+	public void setID(T id) { this.id = id; }
 
 	/**
 	 * Set the data of this message
 	 * 
 	 * @param data
 	 */
-	public void setData(ArrayDeque<Serializable> data) {
-		body = data;
+	public void setData(ArrayDeque<Serializable> data) { this.body = data; }
+
+	@Override
+	public String toString() {
+		StringBuilder content = new StringBuilder();
+		if (body.size() > 0) {
+			for (Iterator<Serializable> iterator = body.iterator(); iterator.hasNext();) {
+				content.append(iterator.next());
+				if (iterator.hasNext()) content.append(", ");
+			}
+			return "ID{" + id + "}, Body{ Size[" + body.size() + "], Content[" + content + "] }";
+		}
+		return "ID{" + id + "}, Body{ Size[0], Content[] }";
+	}
+
+	/**
+	 * 
+	 * @return the size of this message in bytes
+	 */
+	public int byteSize() {
+		int size = -1;
+		ObjectOutputStream oos = null;
+		try {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			oos = new ObjectOutputStream(baos);
+			oos.writeObject(this);
+			size = baos.size();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (oos != null) try {
+				oos.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return size;
 	}
 
 	/**
@@ -100,20 +101,10 @@ public class Message<T extends Serializable> implements Serializable {
 	 */
 	public <DataType extends Serializable> Message<T> add(@SuppressWarnings("unchecked") DataType... data) { return push(data); }
 
-//	/**
-//	 * Adds any array of Serializable data onto the end of the message buffer
-//	 */
-//	public <DataType extends Serializable> Message<T> addArray(Serializable data) { return pushArray(data); }
-
 	/**
 	 * Pushes any number of Serializable data onto the end of the message buffer
 	 */
 	public <DataType extends Serializable> Message<T> push(@SuppressWarnings("unchecked") DataType... data) { for (DataType d : data) push(d); return this; }
-
-//	/**
-//	 * Pushes any array of Serializable data onto the end of the message buffer
-//	 */
-//	public <DataType extends Serializable> Message<T> pushArray(DataType data) { return push(data); }
 
 	/**
 	 * Pushes any Serializable data onto the end of the message buffer
@@ -121,10 +112,6 @@ public class Message<T extends Serializable> implements Serializable {
 	public <DataType extends Serializable> Message<T> push(DataType data) {
 		// Add the data to the body
 		body.add(data);
-
-		// Recalculate the message size
-		header.bodySize = size();
-
 		// Return the target message so it can be "chained"
 		return this;
 	}
@@ -141,10 +128,6 @@ public class Message<T extends Serializable> implements Serializable {
 		@SuppressWarnings("unchecked")
 		// Retrieves and remove the first element of the body
 		DataType data = (DataType) body.pollFirst();
-
-		// Recalculate the message size
-		header.bodySize = size();
-
 		// Return the data
 		return data;
 	}
