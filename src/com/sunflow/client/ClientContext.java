@@ -1,10 +1,6 @@
 package com.sunflow.client;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.function.BiConsumer;
@@ -42,22 +38,6 @@ public class ClientContext extends CommonContext {
 				consumer.accept(error, socket);
 			}
 		});
-	}
-
-	private ObjectInputStream ois;
-
-	@Override
-	protected ObjectInputStream getObjectInputStream(Socket socket) throws IOException {
-		if (ois == null) ois = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
-		return ois;
-	}
-
-	private ObjectOutputStream oos;
-
-	@Override
-	protected ObjectOutputStream getObjectOutputStream(Socket socket) throws IOException {
-		if (oos == null) oos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-		return oos;
 	}
 
 	@Override

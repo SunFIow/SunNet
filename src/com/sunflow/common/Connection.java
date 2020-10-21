@@ -1,6 +1,10 @@
 package com.sunflow.common;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 
@@ -40,9 +44,36 @@ public class Connection<T extends Serializable> {
 	protected Side m_nOwnerType;
 
 	/**
-	 * 
+	 * The id of this connection
 	 */
 	protected int id;
+
+	/**
+	 * The InputStream of this connection
+	 */
+	protected ObjectInputStream inputStream;
+	/**
+	 * The OutputStream of this connection
+	 */
+	protected ObjectOutputStream outputStream;
+
+	protected ObjectInputStream getObjectInputStream(Socket socket) {
+		try {
+			return new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	protected ObjectOutputStream getObjectOutputStream(Socket socket) {
+		try {
+			return new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
 
 	/**
 	 * Specify Owner, connect to context, transfer the socket
@@ -61,9 +92,9 @@ public class Connection<T extends Serializable> {
 
 		this.m_nOwnerType = parent;
 
-//		this.m_msgTemporaryIn = new Message<>();
 		this.m_qMessagesOut = new TSQueue<>();
 		this.id = -1;
+		this.outputStream = getObjectOutputStream(socket);
 	}
 
 	/**
@@ -80,6 +111,7 @@ public class Connection<T extends Serializable> {
 	public void connectToClient(int uid) {
 		if (m_nOwnerType == Side.server && isConnected()) {
 			id = uid;
+			this.inputStream = getObjectInputStream(m_socket);
 			readMessage();
 		}
 	}
@@ -87,11 +119,10 @@ public class Connection<T extends Serializable> {
 	/**
 	 * Connect to a server
 	 * 
-	 * @param uid
-	 *            the unique id for this connection
 	 */
 	public void connectToServer() {
 		if (m_nOwnerType == Side.client && isConnected()) {
+			this.inputStream = getObjectInputStream(m_socket);
 			readMessage();
 		}
 	}
@@ -134,7 +165,9 @@ public class Connection<T extends Serializable> {
 	 * @ASYNC Prime context ready to write a message
 	 */
 	private void writeMessage() {
-		m_context.async_write(m_socket, m_qMessagesOut.front(),
+//		m_context.async_write(m_socket,
+		m_context.async_write(outputStream,
+				m_qMessagesOut.front(),
 				(error) -> {
 					Logger.debug(Thread.currentThread(), "Wrote Message: " + m_qMessagesOut.front());
 					if (error == null) {
@@ -158,7 +191,8 @@ public class Connection<T extends Serializable> {
 	 * @ASYNC Prime context ready to read a message
 	 */
 	private void readMessage() {
-		m_context.async_read(m_socket,
+//		m_context.async_read(m_socket,
+		m_context.async_read(inputStream,
 				(Exception error, Message<T> msg) -> {
 					if (error == null) {
 						// A complete message has been read

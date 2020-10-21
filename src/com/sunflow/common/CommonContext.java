@@ -1,10 +1,14 @@
 package com.sunflow.common;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -49,15 +53,51 @@ public abstract class CommonContext implements Runnable, Closeable {
 	public abstract void async_connect(InetSocketAddress serverEndpoint,
 			BiConsumer<IOException, Socket> consumer);
 
+	public <T extends Serializable> void async_write(ObjectOutputStream out, T data,
+			Consumer<IOException> consumer) {
+		async_post(side + "_context_async_write", () -> {
+			IOException error = null;
+			try {
+				out.writeObject(data);
+				out.flush();
+			} catch (IOException e) {
+				error = e;
+			} finally {
+				consumer.accept(error);
+			}
+		});
+	}
+
+	@SuppressWarnings("unchecked")
+	public <T> void async_read(ObjectInputStream in,
+			BiConsumer<Exception, T> consumer) {
+		async_post(side + "_context_async_read", () -> {
+			T data = null;
+			Exception error = null;
+			try {
+				data = (T) in.readObject();
+			} catch (ClassCastException e) {
+				e.addSuppressed(new InvalidObjectException(
+						"Read object is not the expected type / " + (data != null
+								? data.getClass() + " - " + data
+								: "NULL")));
+				error = e;
+			} catch (ClassNotFoundException | IOException e) {
+				error = e;
+			} finally {
+				consumer.accept(error, data);
+			}
+		});
+	}
+
 	public <T extends Serializable> void async_write(Socket socket, T data,
 			Consumer<IOException> consumer) {
 		async_post(side + "_context_async_write", () -> {
 			IOException error = null;
 			try {
-//				OutputStream os = socket.getOutputStream();
-//				BufferedOutputStream bos = new BufferedOutputStream(os);
-//				ObjectOutputStream oos = new ObjectOutputStream(bos);
-				ObjectOutputStream oos = getObjectOutputStream(socket);
+				OutputStream os = socket.getOutputStream();
+				BufferedOutputStream bos = new BufferedOutputStream(os);
+				ObjectOutputStream oos = new ObjectOutputStream(bos);
 
 				oos.writeObject(data);
 
@@ -70,10 +110,6 @@ public abstract class CommonContext implements Runnable, Closeable {
 		});
 	}
 
-	protected abstract ObjectInputStream getObjectInputStream(Socket socket) throws IOException;
-
-	protected abstract ObjectOutputStream getObjectOutputStream(Socket socket) throws IOException;
-
 	@SuppressWarnings("unchecked")
 	public <T> void async_read(Socket socket,
 			BiConsumer<Exception, T> consumer) {
@@ -81,11 +117,9 @@ public abstract class CommonContext implements Runnable, Closeable {
 			T data = null;
 			Exception error = null;
 			try {
-//				InputStream is = socket.getInputStream();
-//				BufferedInputStream bis = new BufferedInputStream(is);
-//				ObjectInputStream ois = new ObjectInputStream(bis);
-
-				ObjectInputStream ois = getObjectInputStream(socket);
+				InputStream is = socket.getInputStream();
+				BufferedInputStream bis = new BufferedInputStream(is);
+				ObjectInputStream ois = new ObjectInputStream(bis);
 
 				data = (T) ois.readObject();
 			} catch (ClassCastException e) {
