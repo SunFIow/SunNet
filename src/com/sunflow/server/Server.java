@@ -2,6 +2,7 @@ package com.sunflow.server;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.rmi.ConnectIOException;
@@ -24,7 +25,7 @@ public class Server {
 	 * @param <T>
 	 *            The type of messages
 	 */
-	public static class Interface<T> implements Closeable {
+	public static class Interface<T extends Serializable> implements Closeable {
 
 		@Override
 		public void close() {

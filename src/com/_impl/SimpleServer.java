@@ -39,7 +39,7 @@ public class SimpleServer {
 
 		@Override
 		protected void onMessage(Connection<CustomMsgTypes> client, Message<CustomMsgTypes> msg) {
-			switch (msg.header.id) {
+			switch (msg.id()) {
 				case ServerPing:
 					Logger.info("Server", "(" + client.getID() + ") Server Ping");
 

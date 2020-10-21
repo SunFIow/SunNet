@@ -1,26 +1,10 @@
 package com.sunflow.common;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.ArrayDeque;
 
-public class Message<T> {
-	private static byte BYTE_SIZE_INT = 6;
-
-	public enum MessageTypes {
-		PING,
-		FireBullet,
-		MovePlayer;
-
-		private void writeObject(ObjectOutputStream out) throws IOException {
-			System.out.println("TEST");
-			out.defaultWriteObject();
-		}
-	}
+public class Message<T extends Serializable> implements Serializable {
+	private static final long serialVersionUID = 5130385395145010707L;
 
 	/**
 	 * Message Header is sent at start of all messages. The template allows us
@@ -38,74 +22,72 @@ public class Message<T> {
 		}
 	}
 
-	public Header<T> header;
-	public byte[] body;
+	private Header<T> header;
+	private ArrayDeque<Serializable> body;
 
 	public Message() {
 		header = new Header<>();
-		body = new byte[0];
+		body = new ArrayDeque<>();
 	}
 
 	public Message(T id) {
 		this();
-		header.id = id;
-	}
-
-	/**
-	 * @return size of header and body combined
-	 */
-	public int sizeFully() {
-		return sizeHeader() + sizeBody();
-	}
-
-	/**
-	 * @return size of body
-	 */
-	public int size() {
-		return sizeBody();
-	}
-
-	/**
-	 * @return size of header
-	 */
-	private Header<T> cachedHeader;
-	private int cachedHeaderSize = -1;
-
-	public int sizeHeader() {
-		if (header != cachedHeader || cachedHeaderSize < 0)
-			try {
-				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-				ObjectOutputStream oos = new ObjectOutputStream(bos);
-				oos.writeObject(header);
-				oos.close();
-				cachedHeaderSize = bos.size();
-				cachedHeader = header;
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		return cachedHeaderSize;
-	}
-
-	/**
-	 * @return size of body
-	 */
-	public int sizeBody() { return body.length; }
-
-	public void resize(int newBodySize) {
-		body = Arrays.copyOf(body, newBodySize);
-	}
-
-	public void resize(int from, int to) {
-		body = Arrays.copyOfRange(body, from, to);
+		this.header.id = id;
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		for (byte b : body) builder.append(b);
+		for (Object o : body) builder.append(o);
 		String s = builder.toString();
-		return "Header{" + header.toString() + "}" + "\n" +
+		return "Header{" + header + "}" + "\n" +
 				"Body{" + s + "}";
+	}
+
+	/**
+	 * @return the id of this message
+	 */
+	public T id() {
+		return header.id;
+	}
+
+	/**
+	 * @return the number of elements in the body
+	 */
+	public int size() {
+		return body.size();
+	}
+
+	/**
+	 * @return the header of this message
+	 */
+	public Header<T> header() {
+		return header;
+	}
+
+	/**
+	 * @return the data of this message
+	 */
+	public ArrayDeque<Serializable> data() {
+		return body;
+	}
+
+	/**
+	 * Set the header of this message
+	 * 
+	 * @param header
+	 */
+	public void setHeader(Header<T> header) {
+		this.header = header;
+	}
+
+	/**
+	 * Set the data of this message
+	 * 
+	 * @param data
+	 */
+	public void setData(ArrayDeque<Serializable> data) {
+		body = data;
 	}
 
 	/**
@@ -137,111 +119,40 @@ public class Message<T> {
 	 * Pushes any Serializable data onto the end of the message buffer
 	 */
 	public <DataType extends Serializable> Message<T> push(DataType data) {
-		byte[] bytes;
-
-		// Serialize the data
-		try {
-			ByteArrayOutputStream bos = new ByteArrayOutputStream();
-			ObjectOutputStream oos = new ObjectOutputStream(bos);
-
-			// Write the data into the stream
-			oos.writeObject(data);
-
-			// Write the sizeof the data into the stream
-			oos.writeInt(bos.size());
-			oos.flush();
-
-			// Get the bytes of the data + sizeof the data
-			bytes = bos.toByteArray();
-			oos.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			return this;
-		}
-
-		// Cache current size of vector, as this will be the point we insert the data
-		int i = body.length;
-
-		// Resize the vector by the size of the data being pushed
-		resize(i + bytes.length);
-
-		// Copy the data into the newly allocated body space
-//		for (int j = 0; j < bytes.length; j++) body[i + j] = bytes[j];
-		System.arraycopy(bytes, 0, body, i, bytes.length);
+		// Add the data to the body
+		body.add(data);
 
 		// Recalculate the message size
-		header.bodySize = sizeBody();
+		header.bodySize = size();
 
 		// Return the target message so it can be "chained"
 		return this;
 	}
 
 	/**
-	 * @return data from the front of the message
+	 * @return the data from at the front of the message
 	 */
-	public <DataType> DataType remove() { return pop(); }
+	public <DataType extends Serializable> DataType remove() { return pop(); }
 
 	/**
-	 * @return data from the front of the message
+	 * @return the data from at the front of the message
 	 */
-	public <DataType> DataType pop() {
-		int dataSize = -1;
-
-		// Deserialize the data
-		Object o;
-		try {
-			ByteArrayInputStream bis = new ByteArrayInputStream(body);
-			ObjectInputStream ois = new ObjectInputStream(bis);
-
-			// Read the data out of the stream
-			o = ois.readObject();
-
-			// Read the size of the data out of the stream
-			dataSize = ois.readInt();
-
-			ois.close();
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-			return null;
-		}
-
-		// Cache the location towards the end of the vector where the pulled data starts
-		int i = body.length;
-
-		// Shrink the array to remove read bytes
-		resize(dataSize + BYTE_SIZE_INT, i);
+	public <DataType extends Serializable> DataType pop() {
+		@SuppressWarnings("unchecked")
+		// Retrieves and remove the first element of the body
+		DataType data = (DataType) body.pollFirst();
 
 		// Recalculate the message size
-		header.bodySize = sizeBody();
+		header.bodySize = size();
 
 		// Return the data
-		@SuppressWarnings("unchecked")
-		DataType data = (DataType) o;
 		return data;
 	}
 
 	/**
-	 * Remove data from the front of the message and store it in the wrapper
-	 */
-	public <DataType> Message<T> remove(Wrapper<DataType> wrapper) { return pop(wrapper); }
-
-	/**
-	 * Pop data from the front of the message and store it in the wrapper
-	 */
-	public <DataType> Message<T> pop(Wrapper<DataType> wrapper) {
-		// Store popped data in the wrapper
-		wrapper.set(pop());
-
-		// Return the target message so it can be "chained"
-		return this;
-	}
-
-	/**
 	 * @return a boolean from the front of the message
-	 * @throws ClassCastException
-	 *             if the popped object is not a boolean
 	 */
-	public boolean popBoolean() throws ClassCastException { return pop(); }
+	public boolean popBoolean() { return pop(); }
 
 	/**
 	 * @return a byte from the front of the message
@@ -299,7 +210,7 @@ public class Message<T> {
 	 */
 	public String popString() { return pop(); }
 
-	public static class Owned<T> {
+	public static class Owned<T extends Serializable> {
 
 		private Connection<T> remote;
 		private Message<T> msg;
@@ -318,13 +229,4 @@ public class Message<T> {
 
 		public Message<T> getMessage() { return msg; }
 	}
-
-	public static class Wrapper<DataType> {
-		public DataType val;
-
-		public void set(DataType val) { this.val = val; }
-
-		public DataType get() { return val; }
-	}
-
 }

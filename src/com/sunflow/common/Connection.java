@@ -1,14 +1,14 @@
 package com.sunflow.common;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.Socket;
 
-import com.sunflow.common.Message.Header;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
 
-public class Connection<T> {
+public class Connection<T extends Serializable> {
 
 	/**
 	 * Each connection has a unique socket to a remote
@@ -80,7 +80,7 @@ public class Connection<T> {
 	public void connectToClient(int uid) {
 		if (m_nOwnerType == Side.server && isConnected()) {
 			id = uid;
-			readHeader();
+			readMessage();
 		}
 	}
 
@@ -92,7 +92,7 @@ public class Connection<T> {
 	 */
 	public void connectToServer() {
 		if (m_nOwnerType == Side.client && isConnected()) {
-			readHeader();
+			readMessage();
 		}
 	}
 
@@ -126,114 +126,49 @@ public class Connection<T> {
 			 */
 			boolean bWritingMessage = !m_qMessagesOut.empty();
 			m_qMessagesOut.push_back(msg);
-			if (!bWritingMessage) writeHeader();
+			if (!bWritingMessage) writeMessage();
 		});
 	}
 
 	/**
-	 * @ASYNC Prime context ready to read a message header
+	 * @ASYNC Prime context ready to write a message
 	 */
-	private void readHeader() {
-		m_context.async_read(m_socket,
-//				m_msgTemporaryIn,
-				(Exception error, Integer length, Header<T> header) -> {
+	private void writeMessage() {
+		m_context.async_write(m_socket, m_qMessagesOut.front(),
+				(error) -> {
+					Logger.debug(Thread.currentThread(), "Wrote Message: " + m_qMessagesOut.front());
 					if (error == null) {
-						Logger.debug(Thread.currentThread(), "Read Header (" + length + ") / " + (header != null ? header.getClass() + " - " + header : "NULL"));
-						Message<T> m_msgTemporaryIn = new Message<>();
-						// A complete message header has been read
-						m_msgTemporaryIn.header = header;
-						// Check if this message has a body to follow...
-						if (m_msgTemporaryIn.header.bodySize > 0) {
-							// ...it does, so instruct the task to read the body.
-							readBody(m_msgTemporaryIn);
-						} else {
-							addToIncomingMessageQueue(m_msgTemporaryIn);
-							readHeader();
-						}
-					} else {
-						// Check if we got an Error because the Socket isn't connected anymore
-						Logger.error("(" + id + ") Read Header Exception: " + error);
-//						disconnect();
-						try {
-							m_socket.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				});
-	}
-
-	/**
-	 * @ASYNC Prime context ready to read a message body
-	 */
-	private void readBody(Message<T> msgWithHeader) {
-		m_context.async_read(m_socket,
-//							m_msgTemporaryIn,
-				(Exception error, Integer length, byte[] body) -> {
-					if (error == null) {
-						Logger.debug(Thread.currentThread(), "Read Body (" + length + ") / " + (body != null ? body.getClass() + " - " + body : "NULL"));
-						// A complete message body has been read
-						msgWithHeader.body = body;
-						addToIncomingMessageQueue(msgWithHeader);
-						readHeader();
-					} else {
-						Logger.error("(" + id + ") Read Body Exception:", error);
-//						disconnect();
-						try {
-							m_socket.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				});
-	}
-
-	/**
-	 * @ASYNC Prime context ready to write a message header
-	 */
-	private void writeHeader() {
-		m_context.async_write(m_socket,
-				m_qMessagesOut.front().header, m_qMessagesOut.front().sizeHeader(),
-				(error, length) -> {
-					Logger.debug(Thread.currentThread(), "Wrote Header: " + length);
-					if (error == null) {
-						// A complete message header has been written, check if this message
-						// has a body to follow...
-						if (m_qMessagesOut.front().sizeBody() > 0) {
-							// ...it does, so instruct the task to write the body.
-							writeBody();
-						} else {
-							m_qMessagesOut.pop_front();
-							if (!m_qMessagesOut.empty()) {
-								writeHeader();
-							}
-						}
-					} else {
-						Logger.error("(" + id + ") Write Header Exception:", error);
-						try {
-							m_socket.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				});
-	}
-
-	/**
-	 * @ASYNC Prime context ready to write a message body
-	 */
-	private void writeBody() {
-		m_context.async_write(m_socket,
-				m_qMessagesOut.front().body, m_qMessagesOut.front().sizeBody(),
-				(error, length) -> {
-					Logger.debug(Thread.currentThread(), "Wrote Body: " + length);
-					if (error == null) {
+						// A complete message has been written
 						m_qMessagesOut.pop_front();
 						if (!m_qMessagesOut.empty()) {
-							writeHeader();
+							writeMessage();
 						}
 					} else {
-						Logger.error("(" + id + ") Write Body Exception:", error);
+						Logger.error("(" + id + ") Write Message Exception:", error);
+						try {
+							m_socket.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				});
+	}
+
+	/**
+	 * @ASYNC Prime context ready to read a message
+	 */
+	private void readMessage() {
+		m_context.async_read(m_socket,
+				(Exception error, Message<T> msg) -> {
+					if (error == null) {
+						// A complete message has been read
+						Logger.debug(Thread.currentThread(), "Read Message: " + msg);
+						addToIncomingMessageQueue(msg);
+						readMessage();
+					} else {
+						// Check if we got an Error because the Socket isn't connected anymore
+						Logger.error("(" + id + ") Read Message Exception: " + error);
+//						disconnect();
 						try {
 							m_socket.close();
 						} catch (IOException e) {
