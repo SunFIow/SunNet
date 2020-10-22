@@ -132,30 +132,6 @@ public class Server {
 		}
 
 		/**
-		 * Creates a server, bound to a specific address
-		 * (IP address and port number).
-		 * <p>
-		 * If the address is {@code null}, then the system will pick up
-		 * an ephemeral port and a valid local address to bind the socket.
-		 * 
-		 * @param endpoint
-		 *            The ip-address and port number to bind to.
-		 * 
-		 * @return If the server started without errors
-		 */
-		private boolean create(InetSocketAddress endpoint) {
-			serverThreadGroup = new ThreadGroup(endpoint.getPort() + "/Server-Thread-Group");// Create the context
-
-			try {
-				m_context = new ServerContext(serverThreadGroup, endpoint);
-			} catch (IOException e) {
-				Logger.fatal("SERVER", "Starting Error:", e);
-				return false;
-			}
-			return true;
-		}
-
-		/**
 		 * Creates and starts a server, bound to the specified port. A port number
 		 * of {@code 0} means that the port number is automatically
 		 * allocated, typically from an ephemeral port range.
@@ -222,10 +198,31 @@ public class Server {
 		 */
 		public boolean start(InetSocketAddress endpoint) {
 			boolean error = create(endpoint);
+			error = start();
+			return !error;
+		}
 
-			if (error) return false;
+		/**
+		 * Creates a server, bound to a specific address
+		 * (IP address and port number).
+		 * <p>
+		 * If the address is {@code null}, then the system will pick up
+		 * an ephemeral port and a valid local address to bind the socket.
+		 * 
+		 * @param endpoint
+		 *            The ip-address and port number to bind to.
+		 * 
+		 * @return If the server started without errors
+		 */
+		private boolean create(InetSocketAddress endpoint) {
+			serverThreadGroup = new ThreadGroup(endpoint.getPort() + "/Server-Thread-Group");// Create the context
 
-			start();
+			try {
+				m_context = new ServerContext(serverThreadGroup, endpoint);
+			} catch (IOException e) {
+				Logger.fatal("SERVER", "Starting Error:", e);
+				return false;
+			}
 			return true;
 		}
 
