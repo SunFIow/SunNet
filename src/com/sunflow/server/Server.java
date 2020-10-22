@@ -260,6 +260,7 @@ public class Server {
 		/**
 		 * Stops the server but does not close it
 		 */
+		@SuppressWarnings("deprecation")
 		public void stop() {
 			if (!isRunning()) return;
 			// Request the context to close

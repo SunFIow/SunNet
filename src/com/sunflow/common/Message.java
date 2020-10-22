@@ -2,6 +2,7 @@ package com.sunflow.common;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayDeque;
@@ -9,6 +10,25 @@ import java.util.Iterator;
 
 public class Message<T extends Serializable> implements Serializable {
 	private static final long serialVersionUID = 5130385395145010707L;
+
+	private void writeObject(ObjectOutputStream out) throws IOException {
+		out.writeObject(id);
+		int size = body.size();
+		out.writeInt(body.size());
+		if (size > 0) for (Iterator<Serializable> iterator = body.iterator(); iterator.hasNext();)
+			out.writeObject(iterator.next());
+	}
+
+	@SuppressWarnings("unchecked")
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+		body = new ArrayDeque<>();
+		id = (T) in.readObject();
+		int size = in.readInt();
+		for (int i = 0; i < size; i++)
+			body.add((Serializable) in.readObject());
+	}
+
+//	private void readObjectNoData() throws ObjectStreamException {}
 
 	/**
 	 * Message Header is sent at start of all messages. The template allows us

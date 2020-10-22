@@ -1,0 +1,1 @@
+java -jar SimpleClient-0.4.0.jar

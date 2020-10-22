@@ -1,0 +1,1 @@
+java -jar SimpleServer-0.4.0.jar

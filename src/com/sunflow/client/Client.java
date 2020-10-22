@@ -138,6 +138,7 @@ public class Client {
 		/**
 		 * Disconnect from the server
 		 */
+		@SuppressWarnings("deprecation")
 		public void disconnect() {
 			Logger.debug("CLIENT", "disconnect()");
 			// If connection exists, and it's connected then...

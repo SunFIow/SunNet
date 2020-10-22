@@ -84,7 +84,7 @@ public class SimpleServer {
 
 		boolean started = server.start();
 
-		while (server.isRunning()) {
+		if (started) while (server.isRunning()) {
 			server.update();
 		}
 
