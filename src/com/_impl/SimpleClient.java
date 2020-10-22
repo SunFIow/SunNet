@@ -77,8 +77,6 @@ public class SimpleClient {
 //		c.connect(PrivateInfo.subdomain, PrivateInfo.PORT);
 //		c.connect(PrivateInfo.domain, PrivateInfo.PORT);
 
-		Thread.sleep(1000);
-
 		// TODO Make interaction via keypresses not console input
 //		boolean key[] = { false, false, false }; 
 //		boolean old_key[] = { false, false, false };
@@ -103,7 +101,7 @@ public class SimpleClient {
 			if (c.isConnected()) {
 				c.update();
 			} else {
-				Logger.info(System.nanoTime() + ": Server Down");
+				Logger.info("Client", "Server Down");
 				bQuit = true;
 			}
 		}

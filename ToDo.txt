@@ -1,5 +1,2 @@
-# ServerContext
-	## Remove cached streams of disconnected Sockets
-	
 # SimpleClient 
 	## Make interaction via keypresses not console input

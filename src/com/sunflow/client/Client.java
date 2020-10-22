@@ -4,11 +4,11 @@ import java.io.Closeable;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.rmi.ConnectIOException;
 
 import com.sunflow.common.CommonContext;
 import com.sunflow.common.Connection;
 import com.sunflow.common.Message;
+import com.sunflow.error.ConnectingException;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
@@ -70,10 +70,10 @@ public class Client {
 		 *            The port number of the server, between 0 and 65535
 		 */
 
-		public boolean connect(String host, int port) {
+		public void connect(String host, int port) {
 			// Resolve hostname/ip-address into tangible physical address
 			InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
-			return connect(serverEndpoint);
+			connect(serverEndpoint);
 		}
 
 		/**
@@ -85,10 +85,10 @@ public class Client {
 		 *            The port number of the server, between 0 and 65535
 		 */
 
-		public boolean connect(InetAddress host, int port) {
+		public void connect(InetAddress host, int port) {
 			// Resolve hostname/ip-address into tangible physical address
 			InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
-			return connect(serverEndpoint);
+			connect(serverEndpoint);
 		}
 
 		/**
@@ -97,33 +97,20 @@ public class Client {
 		 * @param endpoint
 		 *            InetSocketAddress of the server, between 0 and 65535
 		 */
-		public boolean connect(InetSocketAddress endpoint) {
+		public void connect(InetSocketAddress endpoint) {
 			Logger.info("CLIENT", "Connecting...");
-
-			// Throw Exception if it hostname/ip-address could't get resolved
-			if (endpoint.isUnresolved()) {
-				Logger.fatal("CLIENT", "Connecting Exception:",
-						new ConnectIOException("The endpoint [" + endpoint + "] couldn't get resolved!"));
-				return false;
-			}
 
 			clientThreadGroup = new ThreadGroup(endpoint + "/Client-Thread-Group");
 
 			// Create the context
 			m_context = new ClientContext(clientThreadGroup);
 
-			m_context.async_connect(endpoint, (error, socket) -> {
+			m_context.connect(endpoint, socket -> {
 //				SocketAddress clientEndpoint = socket.getLocalSocketAddress();
-				if (error == null) {
-					Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
-
-					m_connection = new Connection<>(Side.client, m_context, socket, m_qMessagesIn);
-
-					m_connection.connectToServer();
-				} else {
-					Logger.fatal("CLIENT", "Connecting Error:", error);
-				}
-			});
+				Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
+				m_connection = new Connection<>(Side.Client, m_context, socket, m_qMessagesIn);
+				m_connection.connectToServer();
+			}, error -> Logger.error("CLIENT", "couldn't connect", new ConnectingException("", error)));
 
 			// Start Context Thread
 			m_threadContext = new Thread(
@@ -131,8 +118,6 @@ public class Client {
 					m_context::run,
 					"ClientContext");
 			m_threadContext.start();
-
-			return true;
 		}
 
 		/**

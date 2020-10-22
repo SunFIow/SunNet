@@ -2,6 +2,7 @@ package com.sunflow.common;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayDeque;
@@ -9,6 +10,24 @@ import java.util.Iterator;
 
 public class Message<T extends Serializable> implements Serializable {
 	private static final long serialVersionUID = 5130385395145010707L;
+
+	private void writeObject(ObjectOutputStream out) throws IOException {
+		out.writeObject(id);
+		int size = body.size();
+		out.writeInt(body.size());
+		if (size > 0) for (Iterator<Serializable> iterator = body.iterator(); iterator.hasNext();)
+			out.writeObject(iterator.next());
+	}
+
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+		body = new ArrayDeque<>();
+		id = (T) in.readObject();
+		int size = in.readInt();
+		for (int i = 0; i < size; i++)
+			body.add((Serializable) in.readObject());
+	}
+
+//	private void readObjectNoData() throws ObjectStreamException {}
 
 	/**
 	 * Message Header is sent at start of all messages. The template allows us
@@ -20,10 +39,7 @@ public class Message<T extends Serializable> implements Serializable {
 
 	public Message() { body = new ArrayDeque<>(); }
 
-	public Message(T id) {
-		this();
-		this.id = id;
-	}
+	public Message(T id) { this(); this.id = id; }
 
 	/**
 	 * @return the id of this message
@@ -57,7 +73,7 @@ public class Message<T extends Serializable> implements Serializable {
 	@Override
 	public String toString() {
 		StringBuilder content = new StringBuilder();
-		if (body.size() > 0) {
+		if (!body.isEmpty()) {
 			for (Iterator<Serializable> iterator = body.iterator(); iterator.hasNext();) {
 				content.append(iterator.next());
 				if (iterator.hasNext()) content.append(", ");
