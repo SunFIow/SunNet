@@ -5,13 +5,13 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.rmi.ConnectIOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 import com.sunflow.common.CommonContext;
 import com.sunflow.common.Connection;
 import com.sunflow.common.Message;
+import com.sunflow.error.AcceptingException;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
@@ -220,7 +220,7 @@ public class Server {
 			try {
 				m_context = new ServerContext(serverThreadGroup, endpoint);
 			} catch (IOException e) {
-				Logger.fatal("SERVER", "Starting Error:", e);
+				Logger.fatal("SERVER", "Starting Exception:", e);
 				return false;
 			}
 			return true;
@@ -300,37 +300,29 @@ public class Server {
 			 * for each incoming connection attempt
 			 */
 
-			m_context.async_accept((error, socket) -> {
+			m_context.async_accept(socket -> {
 				// Triggered by incoming connection request
-				if (error == null) {
-					Logger.info("SERVER", "New Connection: (" + socket.getRemoteSocketAddress() + ")");
+				Logger.info("SERVER", "New Connection: (" + socket.getRemoteSocketAddress() + ")");
 
-					Connection<T> newconn = new Connection<>(Side.server, m_context, socket, m_qMessagesIn);
+				Connection<T> newconn = new Connection<>(Side.Server, m_context, socket, m_qMessagesIn);
 
-					// Give the server impl a chance to deny connection
-					if (onClientConnect(newconn, nIDCounter)) {
-						// Connection allowed, so add to container of new connections
-						m_deqConnections.offerLast(newconn);
+				// Give the server impl a chance to deny connection
+				if (onClientConnect(newconn, nIDCounter)) {
+					// Connection allowed, so add to container of new connections
+					m_deqConnections.offerLast(newconn);
 
-						newconn.connectToClient(nIDCounter++);
+					newconn.connectToClient(nIDCounter++);
 
-						Logger.info("SERVER", "(" + newconn.getID() + ") Connection Approved");
-					} else {
-						Logger.debug("SERVER", "Connection Denied");
-					}
+					Logger.info("SERVER", "(" + newconn.getID() + ") Connection Approved");
 				} else {
-					// Error has occurred during acceptance
-					Logger.error("SERVER", "New Connection Error:", new ConnectIOException("", error));
-					try {
-						Thread.sleep(5000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+					Logger.debug("SERVER", "Connection Denied");
 				}
 
 				// Prime the context with more work - again simply wait for another connection...
 				waitForClientConnection();
-			});
+			}, error ->
+			// Error has occurred during acceptance
+			Logger.error("SERVER", "New Connection Exception:", new AcceptingException("", error)));
 		}
 
 		/**

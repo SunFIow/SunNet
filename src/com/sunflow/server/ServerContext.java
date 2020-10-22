@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.sunflow.common.CommonContext;
 import com.sunflow.util.Logger;
@@ -19,30 +19,37 @@ public class ServerContext extends CommonContext {
 	}
 
 	public ServerContext(ThreadGroup serverThreadGroup, InetSocketAddress endpoint) throws IOException {
-		super(Side.server, serverThreadGroup);
+		super(Side.Server, serverThreadGroup);
 		serverSocket = new ServerSocket();
 		serverSocket.bind(endpoint);
 		Logger.info("SERVER", "Bound to " + serverSocket.getLocalSocketAddress());
 	}
 
 	@Override
-	public void async_accept(BiConsumer<IOException, Socket> socketConsumer) {
-		async_post("servercontext_async_accept", () -> {
-			Socket socket = null;
-			IOException error = null;
-			try {
-				socket = serverSocket.accept();
-			} catch (IOException e) {
-				error = e;
-			} finally {
-				socketConsumer.accept(error, socket);
-			}
-		});
+	public void accept(Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer) {
+		task("servercontext_accept", () -> {
+			Socket socket = serverSocket.accept();
+			socketConsumer.accept(socket);
+		}, errorConsumer);
+	}
+
+	@Override
+	public void async_accept(Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer) {
+		async_task("servercontext_async_accept", () -> {
+			Socket socket = serverSocket.accept();
+			socketConsumer.accept(socket);
+		}, errorConsumer);
+	}
+
+	@Override
+	public void connect(InetSocketAddress serverEndpoint,
+			Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer) {
+		throw new UnsupportedOperationException("connect can only be called from an ClientContext");
 	}
 
 	@Override
 	public void async_connect(InetSocketAddress serverEndpoint,
-			BiConsumer<IOException, Socket> consumer) {
+			Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer) {
 		throw new UnsupportedOperationException("async_connect can only be called from an ClientContext");
 	}
 

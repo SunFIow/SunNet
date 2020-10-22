@@ -20,6 +20,7 @@ public class Message<T extends Serializable> implements Serializable {
 	}
 
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+		body = new ArrayDeque<>();
 		id = (T) in.readObject();
 		int size = in.readInt();
 		for (int i = 0; i < size; i++)
