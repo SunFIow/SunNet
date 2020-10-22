@@ -1,12 +1,21 @@
 package com.sunflow.common;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
+import java.util.concurrent.Callable;
 
+import com.sunflow.error.DisconnectException;
+import com.sunflow.error.ReadMessageException;
+import com.sunflow.error.WriteMessageException;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
+import com.sunflow.util.Utils;
 
 public class Connection<T extends Serializable> {
 
@@ -40,9 +49,26 @@ public class Connection<T extends Serializable> {
 	protected Side m_nOwnerType;
 
 	/**
-	 * 
+	 * The id of this connection
 	 */
 	protected int id;
+
+	/**
+	 * The InputStream of this connection
+	 */
+	protected Callable<ObjectInputStream> inputStream;
+	/**
+	 * The OutputStream of this connection
+	 */
+	protected Callable<ObjectOutputStream> outputStream;
+
+	protected ObjectInputStream getObjectInputStream(Socket socket) throws IOException {
+		return new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+	}
+
+	protected ObjectOutputStream getObjectOutputStream(Socket socket) throws IOException {
+		return new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+	}
 
 	/**
 	 * Specify Owner, connect to context, transfer the socket
@@ -61,9 +87,9 @@ public class Connection<T extends Serializable> {
 
 		this.m_nOwnerType = parent;
 
-//		this.m_msgTemporaryIn = new Message<>();
 		this.m_qMessagesOut = new TSQueue<>();
 		this.id = -1;
+		this.outputStream = Utils.getCachedCallable(() -> getObjectOutputStream(socket));
 	}
 
 	/**
@@ -78,8 +104,9 @@ public class Connection<T extends Serializable> {
 	 *            the unique id for this connection
 	 */
 	public void connectToClient(int uid) {
-		if (m_nOwnerType == Side.server && isConnected()) {
+		if (m_nOwnerType == Side.Server && isConnected()) {
 			id = uid;
+			this.inputStream = Utils.getCachedCallable(() -> getObjectInputStream(m_socket));
 			readMessage();
 		}
 	}
@@ -87,24 +114,23 @@ public class Connection<T extends Serializable> {
 	/**
 	 * Connect to a server
 	 * 
-	 * @param uid
-	 *            the unique id for this connection
 	 */
 	public void connectToServer() {
-		if (m_nOwnerType == Side.client && isConnected()) {
+		if (m_nOwnerType == Side.Client && isConnected()) {
+			this.inputStream = Utils.getCachedCallable(() -> getObjectInputStream(m_socket));
 			readMessage();
 		}
 	}
 
 	public void disconnect() {
-		m_context.async_post(m_nOwnerType + "_connection_disconnect", () -> {
-			try {
-				m_socket.close();
-//				m_context.stop();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		m_context.async_task(m_nOwnerType + "_connection_disconnect", () -> {
+			m_socket.close();
+//			m_context.stop();
+		}, error -> {
+//			error.printStackTrace();
+			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't disconnect:", new DisconnectException("", error));
 		});
+
 	}
 
 	public boolean isConnected() {
@@ -134,52 +160,41 @@ public class Connection<T extends Serializable> {
 	 * @ASYNC Prime context ready to write a message
 	 */
 	private void writeMessage() {
-		m_context.async_write(m_socket, m_qMessagesOut.front(),
-				(error) -> {
-					Logger.debug(Thread.currentThread(), "Wrote Message: " + m_qMessagesOut.front());
-					if (error == null) {
-						// A complete message has been written
-						m_qMessagesOut.pop_front();
-						if (!m_qMessagesOut.empty()) {
-							writeMessage();
-						}
-					} else {
-						Logger.error("(" + id + ") Write Message Exception:", error);
-						try {
-							m_socket.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				});
+		m_context.async_write(outputStream, m_qMessagesOut.front(), () -> {
+			Logger.debug(Thread.currentThread(), "Wrote Message: " + m_qMessagesOut.front());
+			// A complete message has been written
+			m_qMessagesOut.pop_front();
+			if (!m_qMessagesOut.empty()) {
+				writeMessage();
+			}
+		}, (error) -> {
+			// Something is wrong with this connection...
+			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't write message:", new WriteMessageException("", error));
+			// ... so disconnect it
+			disconnect();
+		});
 	}
 
 	/**
 	 * @ASYNC Prime context ready to read a message
 	 */
 	private void readMessage() {
-		m_context.async_read(m_socket,
-				(Exception error, Message<T> msg) -> {
-					if (error == null) {
-						// A complete message has been read
-						Logger.debug(Thread.currentThread(), "Read Message: " + msg);
-						addToIncomingMessageQueue(msg);
-						readMessage();
-					} else {
-						// Check if we got an Error because the Socket isn't connected anymore
-						Logger.error("(" + id + ") Read Message Exception: " + error);
-//						disconnect();
-						try {
-							m_socket.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				});
+		m_context.async_read(inputStream, (Message<T> msg) -> {
+			// A complete message has been read
+			Logger.debug(Thread.currentThread(), "Read Message: " + msg);
+			addToIncomingMessageQueue(msg);
+			readMessage();
+		}, (error) -> {
+			// Something is wrong with this connection...
+			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't read message:" + new ReadMessageException(error));
+			// ... so disconnect it
+			disconnect();
+
+		});
 	}
 
 	private void addToIncomingMessageQueue(Message<T> msg) {
-		if (m_nOwnerType == Side.server) {
+		if (m_nOwnerType == Side.Server) {
 			m_qMessagesIn.push_back(new Message.Owned<T>(this, msg));
 		} else {
 			m_qMessagesIn.push_back(new Message.Owned<T>(null, msg));

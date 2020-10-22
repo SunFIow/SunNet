@@ -40,10 +40,7 @@ public class Message<T extends Serializable> implements Serializable {
 
 	public Message() { body = new ArrayDeque<>(); }
 
-	public Message(T id) {
-		this();
-		this.id = id;
-	}
+	public Message(T id) { this(); this.id = id; }
 
 	/**
 	 * @return the id of this message
@@ -77,7 +74,7 @@ public class Message<T extends Serializable> implements Serializable {
 	@Override
 	public String toString() {
 		StringBuilder content = new StringBuilder();
-		if (body.size() > 0) {
+		if (!body.isEmpty()) {
 			for (Iterator<Serializable> iterator = body.iterator(); iterator.hasNext();) {
 				content.append(iterator.next());
 				if (iterator.hasNext()) content.append(", ");
