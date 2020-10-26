@@ -1,4 +1,4 @@
-package com._impl;
+package com.$impl;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -15,7 +15,7 @@ public class SimpleClient {
 			Message<CustomMsgTypes> msg = new Message<>(CustomMsgTypes.ServerPing);
 
 			long timeNow = System.currentTimeMillis();
-			msg.push(timeNow);
+			msg.put(timeNow);
 
 			Logger.debug("Client", "Send Ping Message to Server");
 			send(msg);

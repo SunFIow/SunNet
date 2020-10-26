@@ -1,4 +1,4 @@
-package com._impl;
+package com.$impl;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -27,7 +27,7 @@ public class SimpleServer {
 			// Accept every connection
 			boolean accept = true;
 			Message<CustomMsgTypes> msg = new Message<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-			msg.push(clientID);
+			msg.put(clientID);
 			client.send(msg);
 			return accept;
 		}
@@ -50,7 +50,7 @@ public class SimpleServer {
 				case MessageAll:
 					Logger.info("Server", "(" + client.getID() + ") Message All");
 					msg = new Message<>(CustomMsgTypes.ServerMessage);
-					msg.push(client.getID());
+					msg.put(client.getID());
 					messageAllClients(msg, client);
 					break;
 				default:

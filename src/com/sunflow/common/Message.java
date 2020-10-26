@@ -109,24 +109,14 @@ public class Message<T extends Serializable> implements Serializable {
 	}
 
 	/**
-	 * Add any Serializable data onto the end of the message buffer
+	 * Put any number of Serializable data onto the end of the message buffer
 	 */
-	public <DataType extends Serializable> Message<T> add(DataType data) { return push(data); }
+	public <DataType extends Serializable> Message<T> put(@SuppressWarnings("unchecked") DataType... data) { for (DataType d : data) put(d); return this; }
 
 	/**
-	 * Add any number of Serializable data onto the end of the message buffer
+	 * Put any Serializable data onto the end of the message buffer
 	 */
-	public <DataType extends Serializable> Message<T> add(@SuppressWarnings("unchecked") DataType... data) { return push(data); }
-
-	/**
-	 * Pushes any number of Serializable data onto the end of the message buffer
-	 */
-	public <DataType extends Serializable> Message<T> push(@SuppressWarnings("unchecked") DataType... data) { for (DataType d : data) push(d); return this; }
-
-	/**
-	 * Pushes any Serializable data onto the end of the message buffer
-	 */
-	public <DataType extends Serializable> Message<T> push(DataType data) {
+	public <DataType extends Serializable> Message<T> put(DataType data) {
 		// Add the data to the body
 		body.add(data);
 		// Return the target message so it can be "chained"

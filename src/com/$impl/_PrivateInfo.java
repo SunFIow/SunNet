@@ -1,4 +1,4 @@
-package com._impl;
+package com.$impl;
 
 public class _PrivateInfo {
 	/** the port your server will run on */

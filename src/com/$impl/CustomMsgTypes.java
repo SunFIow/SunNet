@@ -1,4 +1,4 @@
-package com._impl;
+package com.$impl;
 
 public enum CustomMsgTypes {
 	ServerAccept,
