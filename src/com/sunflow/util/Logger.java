@@ -20,9 +20,19 @@ public class Logger {
 		log(System.err, "ERROR", msg);
 	}
 
+	public static void warn(Object msg) {
+		if (!Settings.logWarnings) return;
+		log(System.out, "WARNING", msg);
+	}
+
 	public static void info(Object msg) {
 		if (!Settings.logInfos) return;
 		log(System.out, "INFO", msg);
+	}
+
+	public static void help(Object msg) {
+		if (!Settings.logHelpfully) return;
+		log(System.out, "HELPFULLY", msg);
 	}
 
 	public static void debug(Object msg) {
@@ -44,9 +54,19 @@ public class Logger {
 		log(System.err, "ERROR", marker, msg);
 	}
 
+	public static void warn(Object marker, Object msg) {
+		if (!Settings.logWarnings) return;
+		log(System.out, "WARNING", marker, msg);
+	}
+
 	public static void info(Object marker, Object msg) {
 		if (!Settings.logInfos) return;
 		log(System.out, "INFO", marker, msg);
+	}
+
+	public static void help(Object marker, Object msg) {
+		if (!Settings.logHelpfully) return;
+		log(System.out, "HELPFULLY", marker, msg);
 	}
 
 	public static void debug(Object marker, Object msg) {

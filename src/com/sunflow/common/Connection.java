@@ -5,7 +5,6 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.Socket;
 import java.util.concurrent.Callable;
 
@@ -16,8 +15,9 @@ import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
 import com.sunflow.util.Utils;
+import com.ªtest.net.PacketBuffer;
 
-public class Connection<T extends Serializable> {
+public class Connection {
 
 	/**
 	 * Each connection has a unique socket to a remote
@@ -33,14 +33,16 @@ public class Connection<T extends Serializable> {
 	 * This queue holds all mesages to be sent to the remote side
 	 * of this connection
 	 */
-	protected TSQueue<Message<T>> m_qMessagesOut;
+//	protected TSQueue<Message<T>> m_qMessagesOut;
+	protected TSQueue<PacketBuffer> m_qMessagesOut;
 
 	/**
 	 * This queue holds all messages that have been recieved from
 	 * the remote side of this connection. Note it is a reference
 	 * as the "owner" of this connection is expected to provide a queue
 	 */
-	protected TSQueue<Message.Owned<T>> m_qMessagesIn;
+//	protected TSQueue<Message.Owned<T>> m_qMessagesIn;
+	protected TSQueue<PacketBuffer.Owned> m_qMessagesIn;
 
 	/**
 	 * A connection is "owned" by either a server or a client, and its
@@ -80,7 +82,8 @@ public class Connection<T extends Serializable> {
 	 * @param socket
 	 * @param qIn
 	 */
-	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<Message.Owned<T>> qIn) {
+//	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<Message.Owned<T>> qIn) {
+	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<PacketBuffer.Owned> qIn) {
 		this.m_context = m_context;
 		this.m_socket = socket;
 		this.m_qMessagesIn = qIn;
@@ -141,8 +144,9 @@ public class Connection<T extends Serializable> {
 	 * @ASYNC Send a message, connections are one-to-one so no need to specifiy
 	 *        the target, for a client, the target is the server and vice versa
 	 */
-	public void send(final Message<T> msg) {
-		m_context.async_post(m_nOwnerType + "_connection_send", () -> {
+//	public void send(final Message<T> msg) {
+	public void send(final PacketBuffer msg) {
+		m_context.post(m_nOwnerType + "_connection_send", () -> {
 			/*
 			 * If the queue has a message in it, then we must
 			 * assume that it is in the process of asynchronously being written.
@@ -160,8 +164,8 @@ public class Connection<T extends Serializable> {
 	 * @ASYNC Prime context ready to write a message
 	 */
 	private void writeMessage() {
-		m_context.async_write(outputStream, m_qMessagesOut.front(), () -> {
-			Logger.debug(Thread.currentThread(), "Wrote Message: " + m_qMessagesOut.front());
+		m_context.async_write(m_socket, m_qMessagesOut.front(), (wroteBytes) -> {
+			Logger.help(Thread.currentThread(), "Wrote Message of length " + wroteBytes + ": " + m_qMessagesOut.front());
 			// A complete message has been written
 			m_qMessagesOut.pop_front();
 			if (!m_qMessagesOut.empty()) {
@@ -179,9 +183,10 @@ public class Connection<T extends Serializable> {
 	 * @ASYNC Prime context ready to read a message
 	 */
 	private void readMessage() {
-		m_context.async_read(inputStream, (Message<T> msg) -> {
+//		m_context.async_read(inputStream, (Message<T> msg) -> {
+		m_context.async_read(m_socket, (msg, readBytes) -> {
 			// A complete message has been read
-			Logger.debug(Thread.currentThread(), "Read Message: " + msg);
+			Logger.help(Thread.currentThread(), "Read Message of length " + readBytes + ": " + msg);
 			addToIncomingMessageQueue(msg);
 			readMessage();
 		}, (error) -> {
@@ -193,11 +198,27 @@ public class Connection<T extends Serializable> {
 		});
 	}
 
-	private void addToIncomingMessageQueue(Message<T> msg) {
-		if (m_nOwnerType == Side.Server) {
-			m_qMessagesIn.push_back(new Message.Owned<T>(this, msg));
-		} else {
-			m_qMessagesIn.push_back(new Message.Owned<T>(null, msg));
-		}
+//	/**
+//	 * @ASYNC Prime context ready to read a message
+//	 */
+//	private void readMessage() {
+//		m_context.async_read(inputStream, (Message<T> msg) -> {
+//			// A complete message has been read
+//			Logger.debug(Thread.currentThread(), "Read Message: " + msg);
+//			addToIncomingMessageQueue(msg);
+//			readMessage();
+//		}, (error) -> {
+//			// Something is wrong with this connection...
+//			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't read message:" + new ReadMessageException(error));
+//			// ... so disconnect it
+//			disconnect();
+//
+//		});
+//	}
+
+//	private void addToIncomingMessageQueue(Message<T> msg) {
+	private void addToIncomingMessageQueue(PacketBuffer msg) {
+//		m_qMessagesIn.push_back(new Message.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg)); 
+		m_qMessagesIn.push_back(new PacketBuffer.Owned(m_nOwnerType == Side.Server ? this : null, msg));
 	}
 }

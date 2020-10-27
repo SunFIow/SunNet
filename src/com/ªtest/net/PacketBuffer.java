@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.sun.istack.internal.Nullable;
+import com.sunflow.common.Connection;
 import com.ªtest.net.netty.DecoderException;
 import com.ªtest.net.netty.EncoderException;
 
@@ -23,6 +24,26 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 
 public class PacketBuffer extends ByteBuf {
+	public static class Owned {
+
+		private Connection remote;
+		private PacketBuffer msg;
+
+		public Owned(Connection connection, PacketBuffer m_msgTemporaryIn) {
+			this.remote = connection;
+			this.msg = m_msgTemporaryIn;
+		}
+
+		@Override
+		public String toString() {
+			return getMessage().toString();
+		}
+
+		public Connection getRemote() { return remote; }
+
+		public PacketBuffer getMessage() { return msg; }
+	}
+
 	private final ByteBuf buf;
 
 	public PacketBuffer() {
@@ -38,18 +59,30 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	/**
-	 * Write all readable bytes to the OutputStream
+	 * Transfers this buffer's data to the specified stream starting at the
+	 * current {@code readerIndex}.
 	 * 
-	 * @param out
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
 	 */
-	public void write(OutputStream out) throws IOException {
-		readBytes(out, readableBytes());
+	public int write(OutputStream out) throws IOException {
+		int wroteBytes = readableBytes();
+		readBytes(out, wroteBytes);
+		return wroteBytes;
 	}
 
-	public void read(InputStream in) throws IOException{
-		writeBytes(in, in.available());
+	/**
+	 * Transfers the content of the specified stream to this buffer
+	 * starting at the current {@code writerIndex} and increases the
+	 * {@code writerIndex} by the number of the transferred bytes.
+	 * 
+	 * @return the actual number of bytes read in from the specified stream
+	 * 
+	 * @throws IOException
+	 *             if the specified stream threw an exception during I/O
+	 */
+	public int read(InputStream in) throws IOException {
+		return writeBytes(in, in.available());
 	}
 
 	/**

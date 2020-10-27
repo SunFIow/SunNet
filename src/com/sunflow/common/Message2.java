@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.Iterator;
 
-public class Message<T extends Serializable> implements Serializable {
+public class Message2<T extends Serializable> implements Serializable {
 	private static final long serialVersionUID = 5130385395145010707L;
 
 	private void writeObject(ObjectOutputStream out) throws IOException {
@@ -38,19 +38,19 @@ public class Message<T extends Serializable> implements Serializable {
 	private T id;
 	private ArrayDeque<Serializable> body;
 
-	public Message() { body = new ArrayDeque<>(); }
+	public Message2() { body = new ArrayDeque<>(); }
 
-	public Message(T id) { this(); this.id = id; }
+	public Message2(T id) { this(); this.id = id; }
 
 	/**
 	 * @return the id of this message
 	 */
-	public T id() { return id; }
+	public T getID() { return id; }
 
 	/**
 	 * @return the number of elements in the body
 	 */
-	public int size() { return body.size(); }
+	public int getSize() { return body.size(); }
 
 	/**
 	 * @return the data of this message
@@ -111,12 +111,12 @@ public class Message<T extends Serializable> implements Serializable {
 	/**
 	 * Put any number of Serializable data onto the end of the message buffer
 	 */
-	public <DataType extends Serializable> Message<T> put(@SuppressWarnings("unchecked") DataType... data) { for (DataType d : data) put(d); return this; }
+	public <DataType extends Serializable> Message2<T> put(@SuppressWarnings("unchecked") DataType... data) { for (DataType d : data) put(d); return this; }
 
 	/**
 	 * Put any Serializable data onto the end of the message buffer
 	 */
-	public <DataType extends Serializable> Message<T> put(DataType data) {
+	public <DataType extends Serializable> Message2<T> put(DataType data) {
 		// Add the data to the body
 		body.add(data);
 		// Return the target message so it can be "chained"
@@ -200,23 +200,23 @@ public class Message<T extends Serializable> implements Serializable {
 	 */
 	public String popString() { return pop(); }
 
-	public static class Owned<T extends Serializable> {
-
-		private Connection<T> remote;
-		private Message<T> msg;
-
-		public Owned(Connection<T> connection, Message<T> m_msgTemporaryIn) {
-			this.remote = connection;
-			this.msg = m_msgTemporaryIn;
-		}
-
-		@Override
-		public String toString() {
-			return getMessage().toString();
-		}
-
-		public Connection<T> getRemote() { return remote; }
-
-		public Message<T> getMessage() { return msg; }
-	}
+//	public static class Owned<T extends Serializable> {
+//
+//		private Connection<T> remote;
+//		private Message2<T> msg;
+//
+//		public Owned(Connection<T> connection, Message2<T> m_msgTemporaryIn) {
+//			this.remote = connection;
+//			this.msg = m_msgTemporaryIn;
+//		}
+//
+//		@Override
+//		public String toString() {
+//			return getMessage().toString();
+//		}
+//
+//		public Connection<T> getRemote() { return remote; }
+//
+//		public Message2<T> getMessage() { return msg; }
+//	}
 }

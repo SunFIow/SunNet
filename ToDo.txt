@@ -1,2 +1,8 @@
 # SimpleClient 
-	## Make interaction via keypresses not console input
+	## 	Make interaction via keypresses not console input
+	
+# Networking
+	## 	Make async read take in a integer specifing the amount to read, 
+		this is first the headerSize, 
+			that we need to calculate somehow
+		and then the bodysize that we provide when reading the header.

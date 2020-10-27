@@ -7,24 +7,32 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+
+import com.$impl.CustomMsgTypes;
 
 public class SunNetNetty {
 	public static class TestClass implements Data {
 
+		private String name;
 //		public TestClass() {}
 
-		public TestClass(String s) {}
+		public TestClass(String s) { name = s; }
 
 		@Override
 		public void write(PacketBuffer buffer) {
-
+			buffer.writeString(name);
 		}
 
 		@Override
 		public void read(PacketBuffer buffer) {
-
+			name = buffer.readString();
 		}
 
+		@Override
+		public String toString() {
+			return "[" + name + "]";
+		}
 	}
 
 	private enum TestEnum {
@@ -88,42 +96,60 @@ public class SunNetNetty {
 //				ReadWrite::write,
 //				ReadWrite::read);
 
-//		MessageBuffer<Boolean> mb = MessageBuffer.createMessage(true);
-//		MessageBuffer<Integer> mb = MessageBuffer.createMessage(10);
-//		MessageBuffer<TestEnum> mb = MessageBuffer.createMessage(TestEnum.class);
-		TestClass tc = new TestClass("");
-		MessageBuffer<TestClass> mb = MessageBuffer.create(tc);
-//		MessageBuffer<TestClass> mb = MessageBuffer.createGeneric(TestClass.class);
-//		mb.setID(tc);
-		System.out.println(mb.getID());
+//		MessageBuffer<Boolean> mb = MessageBuffer.create(true);
+//		MessageBuffer<Integer> mb = MessageBuffer.create(10);
+		MessageBuffer<CustomMsgTypes> mb = MessageBuffer.create(CustomMsgTypes.ServerPing);
+//		MessageBuffer<TestClass> mb = MessageBuffer.create(new TestClass("TestName");
+		System.out.println("0: " + mb.getID());
 
 //		mb.writeEnumValue(TestEnum.two);
 		long now = System.currentTimeMillis();
-		System.out.println(now);
-		mb.writeLong(now);
+		System.out.println("1: " + now);
+		mb.writeVarLong(now);
 
 		ByteArrayOutputStream baout = new ByteArrayOutputStream();
-		BufferedOutputStream bout = new BufferedOutputStream(baout);
-
-		mb.write(bout);
-		bout.close();
+//		BufferedOutputStream bout = new BufferedOutputStream(baout);
+		OutputStream out = baout;
+		int length = mb.write(out);
+		out.close();
 
 		byte[] bytes = baout.toByteArray();
-		System.out.println(bytes.length);
+		System.out.println("2: " + bytes.length + ", " + length);
 
 //		mb = MessageBuffer.createMessage(Boolean.class);
 //		mb = MessageBuffer.createMessage(Integer.class);
 //		mb = MessageBuffer.createMessage(TestEnum.class);
-		mb = MessageBuffer.createGeneric(TestClass.class);
+//		MessageBuffer<TestClass> temp = MessageBuffer.createGeneric(TestClass.class);
+		MessageBuffer<CustomMsgTypes> temp = MessageBuffer.createEnum(CustomMsgTypes.class);
 
 		ByteArrayInputStream bain = new ByteArrayInputStream(bytes);
 		BufferedInputStream bin = new BufferedInputStream(bain);
 
-		// THREE
-		mb.read(bin);
-		// ONE
-		System.out.println(mb.getID());
-		System.out.println(mb.readLong());
+		temp.read(bin);
+		System.out.println("4: " + temp.getID());
+		System.out.println("7: " + temp.readVarLong());
+
+		baout = new ByteArrayOutputStream();
+//		bout = new BufferedOutputStream(baout);
+		out = baout;
+
+		mb.writeLong(now);
+		length = mb.write(out);
+		out.flush();
+
+//		mb.write(bout);
+//		bout.flush();
+
+		bytes = baout.toByteArray();
+		System.out.println("3: " + bytes.length + ", " + length);
+
+		bain = new ByteArrayInputStream(bytes);
+		bin = new BufferedInputStream(bain);
+
+		temp.read(bin);
+		System.out.println("4: " + temp.getID());
+		System.out.println("7: " + temp.readLong());
+
 //		System.out.println(mb.readEnumValue(TestEnum.class));
 
 		/*

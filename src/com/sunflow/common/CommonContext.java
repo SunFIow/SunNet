@@ -9,10 +9,10 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -20,6 +20,7 @@ import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
 import com.sunflow.util.Task;
+import com.ªtest.net.PacketBuffer;
 
 public abstract class CommonContext implements Runnable, Closeable {
 	private static int id = 0;
@@ -42,7 +43,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 	}
 
 	public void post(String description, Runnable post) {
-		Logger.debug("CommonContext", "Run Task[" + description + "::" + id++ + threadGroup + "]");
+		Logger.debug("CommonContext", "Run Task[" + description + "::" + id++ + "," + threadGroup.getName() + "]");
 		post.run();
 	}
 
@@ -86,7 +87,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 
 	public abstract void async_connect(InetSocketAddress serverEndpoint, Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer);
 
-	public <T extends Serializable> void write(Socket socket, T data,
+	public <T> void write(Socket socket, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		write(() -> {
 			OutputStream os = socket.getOutputStream();
@@ -96,7 +97,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, data, successConsumer, errorConsumer);
 	}
 
-	public <T extends Serializable> void write(Callable<ObjectOutputStream> streamSupplier, T data,
+	public <T> void write(Callable<ObjectOutputStream> streamSupplier, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		task(side + "_context_write", () -> {
 			ObjectOutputStream out = streamSupplier.call();
@@ -106,7 +107,18 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, errorConsumer);
 	}
 
-	public <T extends Serializable> void async_write(Socket socket, T data,
+	public void write(Callable<ObjectOutputStream> streamSupplier, PacketBuffer data,
+			Runnable successConsumer, Consumer<Exception> errorConsumer) {
+		task(side + "_context_write", () -> {
+			ObjectOutputStream out = streamSupplier.call();
+//			out.writeObject(data);
+			data.write(out);
+			out.flush();
+			successConsumer.run();
+		}, errorConsumer);
+	}
+
+	public <T> void async_write(Socket socket, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		async_write(() -> {
 			OutputStream os = socket.getOutputStream();
@@ -116,13 +128,24 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, data, successConsumer, errorConsumer);
 	}
 
-	public <T extends Serializable> void async_write(Callable<ObjectOutputStream> streamSupplier, T data,
+	public <T> void async_write(Callable<ObjectOutputStream> streamSupplier, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		async_task(side + "_context_async_write", () -> {
 			ObjectOutputStream out = streamSupplier.call();
 			out.writeObject(data);
 			out.flush();
 			successConsumer.run();
+		}, errorConsumer);
+	}
+
+	public void async_write(Socket socket, PacketBuffer data,
+			Consumer<Integer> successConsumer, Consumer<Exception> errorConsumer) {
+		async_task(side + "_context_async_write", () -> {
+			OutputStream rawout = socket.getOutputStream();
+			BufferedOutputStream out = new BufferedOutputStream(rawout);
+			int wroteBytes = data.write(out);
+			out.flush();
+			successConsumer.accept(wroteBytes);
 		}, errorConsumer);
 	}
 
@@ -181,6 +204,23 @@ public abstract class CommonContext implements Runnable, Closeable {
 								? raw.getClass() + " - " + raw
 								: "NULL"));
 			}
+		}, errorConsumer);
+	}
+
+	public <T> void async_read(Socket socket,
+			BiConsumer<PacketBuffer, Integer> messageConsumer, Consumer<Exception> errorConsumer) {
+		async_task(side + "_context_async_read", () -> {
+			PacketBuffer buffer = new PacketBuffer();
+			InputStream rawin = socket.getInputStream();
+			BufferedInputStream in = new BufferedInputStream(rawin);
+			Logger.debug("read 0");
+			while (in.available() == 0) {
+
+			}
+			Logger.debug("read 1");
+//			Thread.sleep(10);
+			int readBytes = buffer.read(in);
+			messageConsumer.accept(buffer, readBytes);
 		}, errorConsumer);
 	}
 
