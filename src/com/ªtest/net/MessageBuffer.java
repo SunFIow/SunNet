@@ -7,8 +7,6 @@ import java.lang.reflect.Constructor;
 import java.util.Date;
 import java.util.UUID;
 
-import javax.activation.UnsupportedDataTypeException;
-
 import io.netty.buffer.ByteBuf;
 
 public abstract class MessageBuffer<T> extends PacketBuffer {
@@ -53,9 +51,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 
 		public EnumMessage(Class<E> idClazz) { super(); this.idClazz = idClazz; }
 
-		public EnumMessage(PacketBuffer origin, Class<E> idClazz) { super(origin); this.idClazz = idClazz; }
+		public EnumMessage(Class<E> idClazz, PacketBuffer origin) { super(origin); this.idClazz = idClazz; }
 
-		public EnumMessage(ByteBuf wrapped, Class<E> idClazz) { super(wrapped); this.idClazz = idClazz; }
+		public EnumMessage(Class<E> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -271,9 +269,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 
 		public GenericMessage(Class<G> idClazz) { super(); this.idClazz = idClazz; }
 
-		public GenericMessage(PacketBuffer origin, Class<G> idClazz) { super(origin); this.idClazz = idClazz; }
+		public GenericMessage(Class<G> idClazz, PacketBuffer origin) { super(origin); this.idClazz = idClazz; }
 
-		public GenericMessage(ByteBuf wrapped, Class<G> idClazz) { super(wrapped); this.idClazz = idClazz; }
+		public GenericMessage(Class<G> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -306,313 +304,117 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		}
 	}
 
-	/*
-	 * Generic Class
-	 */
-	@SuppressWarnings("unchecked")
-	public static <C, E extends Enum<E>, G extends Data> MessageBuffer<C> createMessage(Class<C> idClazz) throws UnsupportedDataTypeException {
-		if (Enum.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.EnumMessage<E>((Class<E>) idClazz);
-		if (idClazz == Boolean.class || idClazz == boolean.class)
-			return (MessageBuffer<C>) new MessageBuffer.BooleanMessage();
-		if (idClazz == Byte.class || idClazz == byte.class)
-			return (MessageBuffer<C>) new MessageBuffer.ByteMessage();
-		if (idClazz == Short.class || idClazz == short.class)
-			return (MessageBuffer<C>) new MessageBuffer.ShortMessage();
-		if (idClazz == Integer.class || idClazz == int.class)
-			return (MessageBuffer<C>) new MessageBuffer.IntegerMessage();
-		if (idClazz == Long.class || idClazz == long.class)
-			return (MessageBuffer<C>) new MessageBuffer.LongMessage();
-		if (idClazz == Float.class || idClazz == float.class)
-			return (MessageBuffer<C>) new MessageBuffer.FloatMessage();
-		if (idClazz == Double.class || idClazz == double.class)
-			return (MessageBuffer<C>) new MessageBuffer.DoubleMessage();
-		if (idClazz == Character.class || idClazz == char.class)
-			return (MessageBuffer<C>) new MessageBuffer.CharacterMessage();
-		if (idClazz == String.class)
-			return (MessageBuffer<C>) new MessageBuffer.StringMessage();
-		if (Date.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.TimeMessage();
-		if (idClazz == UUID.class)
-			return (MessageBuffer<C>) new MessageBuffer.UUIDMessage();
-		if (Data.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.GenericMessage<G>((Class<G>) idClazz);
-
-		throw new UnsupportedDataTypeException(
-				"[" + idClazz + "] is not a supported MessageBuffer id\n\t\t" +
-						"supported types are" + "\n\t\t" +
-						"[" + Enum.class + "]" + "\n\t\t" +
-						"[" + Boolean.class + "]" +
-						"[" + Integer.class + "]" +
-						"[" + Float.class + "]" +
-						"[" + Double.class + "]" + "\n\t\t" +
-						"[" + Character.class + "]" +
-						"[" + String.class + "]" + "\n\t\t" +
-						"[" + Date.class + "]" +
-						"[" + UUID.class + "]" + "\n\t\t" +
-						"[" + Data.class + "]");
-	}
-
-	@SuppressWarnings("unchecked")
-	public static <C, E extends Enum<E>, G extends Data> MessageBuffer<C> createMessage(Class<C> idClazz, PacketBuffer origin) throws UnsupportedDataTypeException {
-		if (Enum.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.EnumMessage<E>(origin, (Class<E>) idClazz);
-		if (idClazz == Boolean.class || idClazz == boolean.class)
-			return (MessageBuffer<C>) new MessageBuffer.BooleanMessage(origin);
-		if (idClazz == Byte.class || idClazz == byte.class)
-			return (MessageBuffer<C>) new MessageBuffer.ByteMessage(origin);
-		if (idClazz == Short.class || idClazz == short.class)
-			return (MessageBuffer<C>) new MessageBuffer.ShortMessage(origin);
-		if (idClazz == Integer.class || idClazz == int.class)
-			return (MessageBuffer<C>) new MessageBuffer.IntegerMessage(origin);
-		if (idClazz == Long.class || idClazz == long.class)
-			return (MessageBuffer<C>) new MessageBuffer.LongMessage(origin);
-		if (idClazz == Float.class || idClazz == float.class)
-			return (MessageBuffer<C>) new MessageBuffer.FloatMessage(origin);
-		if (idClazz == Double.class || idClazz == double.class)
-			return (MessageBuffer<C>) new MessageBuffer.DoubleMessage(origin);
-		if (idClazz == Character.class || idClazz == char.class)
-			return (MessageBuffer<C>) new MessageBuffer.CharacterMessage(origin);
-		if (idClazz == String.class)
-			return (MessageBuffer<C>) new MessageBuffer.StringMessage(origin);
-		if (Date.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.TimeMessage(origin);
-		if (idClazz == UUID.class)
-			return (MessageBuffer<C>) new MessageBuffer.UUIDMessage(origin);
-		if (Data.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.GenericMessage<G>(origin, (Class<G>) idClazz);
-
-		throw new UnsupportedDataTypeException("[" + idClazz + "] is not a supported MessageBuffer id\n\t\t" +
-				"supported classes are" + "\n\t\t" +
-				"[" + Enum.class + "]" + "\n\t\t" +
-				"[" + Boolean.class + "]" +
-				"[" + Integer.class + "]" +
-				"[" + Float.class + "]" +
-				"[" + Double.class + "]" + "\n\t\t" +
-				"[" + Character.class + "]" +
-				"[" + String.class + "]" + "\n\t\t" +
-				"[" + Date.class + "]" +
-				"[" + UUID.class + "]" + "\n\t\t" +
-				"[" + Data.class + "]");
-	}
-
-	@SuppressWarnings("unchecked")
-	public static <C, E extends Enum<E>, G extends Data> MessageBuffer<C> createMessage(Class<C> idClazz, ByteBuf wrapper) throws UnsupportedDataTypeException {
-		if (Enum.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.EnumMessage<E>(wrapper, (Class<E>) idClazz);
-		if (idClazz == Boolean.class || idClazz == boolean.class)
-			return (MessageBuffer<C>) new MessageBuffer.BooleanMessage(wrapper);
-		if (idClazz == Byte.class || idClazz == byte.class)
-			return (MessageBuffer<C>) new MessageBuffer.ByteMessage(wrapper);
-		if (idClazz == Short.class || idClazz == short.class)
-			return (MessageBuffer<C>) new MessageBuffer.ShortMessage(wrapper);
-		if (idClazz == Integer.class || idClazz == int.class)
-			return (MessageBuffer<C>) new MessageBuffer.IntegerMessage(wrapper);
-		if (idClazz == Long.class || idClazz == long.class)
-			return (MessageBuffer<C>) new MessageBuffer.LongMessage(wrapper);
-		if (idClazz == Float.class || idClazz == float.class)
-			return (MessageBuffer<C>) new MessageBuffer.FloatMessage(wrapper);
-		if (idClazz == Double.class || idClazz == double.class)
-			return (MessageBuffer<C>) new MessageBuffer.DoubleMessage(wrapper);
-		if (idClazz == Character.class || idClazz == char.class)
-			return (MessageBuffer<C>) new MessageBuffer.CharacterMessage(wrapper);
-		if (idClazz == String.class)
-			return (MessageBuffer<C>) new MessageBuffer.StringMessage(wrapper);
-		if (Date.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.TimeMessage(wrapper);
-		if (idClazz == UUID.class)
-			return (MessageBuffer<C>) new MessageBuffer.UUIDMessage(wrapper);
-		if (Data.class.isAssignableFrom(idClazz))
-			return (MessageBuffer<C>) new MessageBuffer.GenericMessage<G>(wrapper, (Class<G>) idClazz);
-
-		throw new UnsupportedDataTypeException("[" + idClazz + "] is not a supported MessageBuffer id\n\t\t" +
-				"supported classes are" + "\n\t\t" +
-				"[" + Enum.class + "]" + "\n\t\t" +
-				"[" + Boolean.class + "]" +
-				"[" + Integer.class + "]" +
-				"[" + Float.class + "]" +
-				"[" + Double.class + "]" + "\n\t\t" +
-				"[" + Character.class + "]" +
-				"[" + String.class + "]" + "\n\t\t" +
-				"[" + Date.class + "]" +
-				"[" + UUID.class + "]" + "\n\t\t" +
-				"[" + Data.class + "]");
-	}
 
 	/* Enum */
+	public static <E extends Enum<E>> MessageBuffer<E> create(E id) { return createEnum(id.getDeclaringClass()).setID(id); }
+	public static <E extends Enum<E>> MessageBuffer<E> create(E id, PacketBuffer origin) { return createEnum(id.getDeclaringClass(), origin).setID(id); }
+	public static <E extends Enum<E>> MessageBuffer<E> create(E id, ByteBuf wrapper) { return createEnum(id.getDeclaringClass(), wrapper).setID(id); }
+	public static <E extends Enum<E>> MessageBuffer<E> createEnum(Class<E> idClazz) { return new MessageBuffer.EnumMessage<E>(idClazz); }
+	public static <E extends Enum<E>> MessageBuffer<E> createEnum(Class<E> idClazz, PacketBuffer origin) { return new MessageBuffer.EnumMessage<E>(idClazz, origin); }
+	public static <E extends Enum<E>> MessageBuffer<E> createEnum(Class<E> idClazz, ByteBuf wrapper) { return new MessageBuffer.EnumMessage<E>(idClazz, wrapper); }
 
-	@SuppressWarnings("unchecked")
-	public static <E extends Enum<E>> MessageBuffer<E> createMessage(E id) {
-		return new MessageBuffer.EnumMessage<E>((Class<E>) id.getClass()).setID(id);
-	}
-
-	@SuppressWarnings("unchecked")
-	public static <E extends Enum<E>> MessageBuffer<E> createMessage(E id, PacketBuffer origin) {
-		return new MessageBuffer.EnumMessage<E>(origin, (Class<E>) id.getClass()).setID(id);
-	}
-
-	@SuppressWarnings("unchecked")
-	public static <E extends Enum<E>> MessageBuffer<E> createMessage(E id, ByteBuf wrapper) {
-		return new MessageBuffer.EnumMessage<E>(wrapper, (Class<E>) id.getClass()).setID(id);
-	}
 
 	/* Boolean */
-	public static MessageBuffer<Boolean> createMessage(boolean id) {
-		return new MessageBuffer.BooleanMessage().setID(id);
-	}
-
-	public static MessageBuffer<Boolean> createMessage(boolean id, PacketBuffer origin) {
-		return new MessageBuffer.BooleanMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Boolean> createMessage(boolean id, ByteBuf wrapper) {
-		return new MessageBuffer.BooleanMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Boolean> create(boolean id) { return createBoolean().setID(id); }
+	public static MessageBuffer<Boolean> create(boolean id, PacketBuffer origin) { return createBoolean(origin).setID(id); }
+	public static MessageBuffer<Boolean> create(boolean id, ByteBuf wrapper) { return createBoolean(wrapper).setID(id); }
+	public static MessageBuffer<Boolean> createBoolean() { return new MessageBuffer.BooleanMessage(); }
+	public static MessageBuffer<Boolean> createBoolean(PacketBuffer origin) { return new MessageBuffer.BooleanMessage(origin); }
+	public static MessageBuffer<Boolean> createBoolean(ByteBuf wrapper) { return new MessageBuffer.BooleanMessage(wrapper); }
 
 	/* Byte */
-	public static MessageBuffer<Byte> createMessage(byte id) {
-		return new MessageBuffer.ByteMessage().setID(id);
-	}
-
-	public static MessageBuffer<Byte> createMessage(byte id, PacketBuffer origin) {
-		return new MessageBuffer.ByteMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Byte> createMessage(byte id, ByteBuf wrapper) {
-		return new MessageBuffer.ByteMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Byte> create(byte id) { return createByte().setID(id); }
+	public static MessageBuffer<Byte> create(byte id, PacketBuffer origin) { return createByte(origin).setID(id); }
+	public static MessageBuffer<Byte> create(byte id, ByteBuf wrapper) { return createByte(wrapper).setID(id); }
+	public static MessageBuffer<Byte> createByte() { return new MessageBuffer.ByteMessage(); }
+	public static MessageBuffer<Byte> createByte(PacketBuffer origin) { return new MessageBuffer.ByteMessage(origin); }
+	public static MessageBuffer<Byte> createByte(ByteBuf wrapper) { return new MessageBuffer.ByteMessage(wrapper); }
 
 	/* Short */
-	public static MessageBuffer<Short> createMessage(short id) {
-		return new MessageBuffer.ShortMessage().setID(id);
-	}
-
-	public static MessageBuffer<Short> createMessage(short id, PacketBuffer origin) {
-		return new MessageBuffer.ShortMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Short> createMessage(short id, ByteBuf wrapper) {
-		return new MessageBuffer.ShortMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Short> create(short id) { return createShort().setID(id); }
+	public static MessageBuffer<Short> create(short id, PacketBuffer origin) { return createShort(origin).setID(id); }
+	public static MessageBuffer<Short> create(short id, ByteBuf wrapper) { return createShort(wrapper).setID(id); }
+	public static MessageBuffer<Short> createShort() { return new MessageBuffer.ShortMessage(); }
+	public static MessageBuffer<Short> createShort(PacketBuffer origin) { return new MessageBuffer.ShortMessage(origin); }
+	public static MessageBuffer<Short> createShort(ByteBuf wrapper) { return new MessageBuffer.ShortMessage(wrapper); }
 
 	/* Integer */
-	public static MessageBuffer<Integer> createMessage(int id) {
-		return new MessageBuffer.IntegerMessage().setID(id);
-	}
-
-	public static MessageBuffer<Integer> createMessage(int id, PacketBuffer origin) {
-		return new MessageBuffer.IntegerMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Integer> createMessage(int id, ByteBuf wrapper) {
-		return new MessageBuffer.IntegerMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Integer> create(int id) { return createInteger().setID(id); }
+	public static MessageBuffer<Integer> create(int id, PacketBuffer origin) { return createInteger(origin).setID(id); }
+	public static MessageBuffer<Integer> create(int id, ByteBuf wrapper) { return createInteger(wrapper).setID(id); }
+	public static MessageBuffer<Integer> createInteger() { return new MessageBuffer.IntegerMessage(); }
+	public static MessageBuffer<Integer> createInteger(PacketBuffer origin) { return new MessageBuffer.IntegerMessage(origin); }
+	public static MessageBuffer<Integer> createInteger(ByteBuf wrapper) { return new MessageBuffer.IntegerMessage(wrapper); }
 
 	/* Long */
-	public static MessageBuffer<Long> createMessage(long id) {
-		return new MessageBuffer.LongMessage().setID(id);
-	}
-
-	public static MessageBuffer<Long> createMessage(long id, PacketBuffer origin) {
-		return new MessageBuffer.LongMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Long> createMessage(long id, ByteBuf wrapper) {
-		return new MessageBuffer.LongMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Long> create(long id) { return createLong().setID(id); }
+	public static MessageBuffer<Long> create(long id, PacketBuffer origin) { return createLong(origin).setID(id); }
+	public static MessageBuffer<Long> create(long id, ByteBuf wrapper) { return createLong(wrapper).setID(id); }
+	public static MessageBuffer<Long> createLong() { return new MessageBuffer.LongMessage(); }
+	public static MessageBuffer<Long> createLong(PacketBuffer origin) { return new MessageBuffer.LongMessage(origin); }
+	public static MessageBuffer<Long> createLong(ByteBuf wrapper) { return new MessageBuffer.LongMessage(wrapper); }
 
 	/* Float */
-	public static MessageBuffer<Float> createMessage(float id) {
-		return new MessageBuffer.FloatMessage().setID(id);
-	}
-
-	public static MessageBuffer<Float> createMessage(float id, PacketBuffer origin) {
-		return new MessageBuffer.FloatMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Float> createMessage(float id, ByteBuf wrapper) {
-		return new MessageBuffer.FloatMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Float> create(float id) { return createFloat().setID(id); }
+	public static MessageBuffer<Float> create(float id, PacketBuffer origin) { return createFloat(origin).setID(id); }
+	public static MessageBuffer<Float> create(float id, ByteBuf wrapper) { return createFloat(wrapper).setID(id); }
+	public static MessageBuffer<Float> createFloat() { return new MessageBuffer.FloatMessage(); }
+	public static MessageBuffer<Float> createFloat(PacketBuffer origin) { return new MessageBuffer.FloatMessage(origin); }
+	public static MessageBuffer<Float> createFloat(ByteBuf wrapper) { return new MessageBuffer.FloatMessage(wrapper); }
 
 	/* Double */
-	public static MessageBuffer<Double> createMessage(double id) {
-		return new MessageBuffer.DoubleMessage().setID(id);
-	}
-
-	public static MessageBuffer<Double> createMessage(double id, PacketBuffer origin) {
-		return new MessageBuffer.DoubleMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Double> createMessage(double id, ByteBuf wrapper) {
-		return new MessageBuffer.DoubleMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Double> create(double id) { return createDouble().setID(id); }
+	public static MessageBuffer<Double> create(double id, PacketBuffer origin) { return createDouble(origin).setID(id); }
+	public static MessageBuffer<Double> create(double id, ByteBuf wrapper) { return createDouble(wrapper).setID(id); }
+	public static MessageBuffer<Double> createDouble() { return new MessageBuffer.DoubleMessage(); }
+	public static MessageBuffer<Double> createDouble(PacketBuffer origin) { return new MessageBuffer.DoubleMessage(origin); }
+	public static MessageBuffer<Double> createDouble(ByteBuf wrapper) { return new MessageBuffer.DoubleMessage(wrapper); }
 
 	/* Character */
-	public static MessageBuffer<Character> createMessage(char id) {
-		return new MessageBuffer.CharacterMessage().setID(id);
-	}
-
-	public static MessageBuffer<Character> createMessage(char id, PacketBuffer origin) {
-		return new MessageBuffer.CharacterMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Character> createMessage(char id, ByteBuf wrapper) {
-		return new MessageBuffer.CharacterMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Character> create(char id) { return createCharacter().setID(id); }
+	public static MessageBuffer<Character> create(char id, PacketBuffer origin) { return createCharacter(origin).setID(id); }
+	public static MessageBuffer<Character> create(char id, ByteBuf wrapper) { return createCharacter(wrapper).setID(id); }
+	public static MessageBuffer<Character> createCharacter() { return new MessageBuffer.CharacterMessage(); }
+	public static MessageBuffer<Character> createCharacter(PacketBuffer origin) { return new MessageBuffer.CharacterMessage(origin); }
+	public static MessageBuffer<Character> createCharacter(ByteBuf wrapper) { return new MessageBuffer.CharacterMessage(wrapper); }
 
 	/* String */
-	public static MessageBuffer<String> createMessage(String id) {
-		return new MessageBuffer.StringMessage().setID(id);
-	}
+	public static MessageBuffer<String> create(String id) { return createString().setID(id); }
+	public static MessageBuffer<String> create(String id, PacketBuffer origin) { return createString(origin).setID(id); }
+	public static MessageBuffer<String> create(String id, ByteBuf wrapper) { return createString(wrapper).setID(id); }
+	public static MessageBuffer<String> createString() { return new MessageBuffer.StringMessage(); }
+	public static MessageBuffer<String> createString(PacketBuffer origin) { return new MessageBuffer.StringMessage(origin); }
+	public static MessageBuffer<String> createString(ByteBuf wrapper) { return new MessageBuffer.StringMessage(wrapper); }
 
-	public static MessageBuffer<String> createMessage(String id, PacketBuffer origin) {
-		return new MessageBuffer.StringMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<String> createMessage(String id, ByteBuf wrapper) {
-		return new MessageBuffer.StringMessage(wrapper).setID(id);
-	}
 
 	/* Time */
-	public static MessageBuffer<Date> createMessage(Date id) {
-		return new MessageBuffer.TimeMessage().setID(id);
-	}
-
-	public static MessageBuffer<Date> createMessage(Date id, PacketBuffer origin) {
-		return new MessageBuffer.TimeMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<Date> createMessage(Date id, ByteBuf wrapper) {
-		return new MessageBuffer.TimeMessage(wrapper).setID(id);
-	}
+	public static MessageBuffer<Date> create(Date id) { return createTime().setID(id); }
+	public static MessageBuffer<Date> create(Date id, PacketBuffer origin) { return createTime(origin).setID(id); }
+	public static MessageBuffer<Date> create(Date id, ByteBuf wrapper) { return createTime(wrapper).setID(id); }
+	public static MessageBuffer<Date> createTime() { return new MessageBuffer.TimeMessage(); }
+	public static MessageBuffer<Date> createTime(PacketBuffer origin) { return new MessageBuffer.TimeMessage(origin); }
+	public static MessageBuffer<Date> createTime(ByteBuf wrapper) { return new MessageBuffer.TimeMessage(wrapper); }
 
 	/* UUID */
-	public static MessageBuffer<UUID> createMessage(UUID id) {
-		return new MessageBuffer.UUIDMessage().setID(id);
-	}
+	public static MessageBuffer<UUID> create(UUID id) { return createUUID().setID(id); }
+	public static MessageBuffer<UUID> create(UUID id, PacketBuffer origin) { return createUUID(origin).setID(id); }
+	public static MessageBuffer<UUID> create(UUID id, ByteBuf wrapper) { return createUUID(wrapper).setID(id); }
+	public static MessageBuffer<UUID> createUUID() { return new MessageBuffer.UUIDMessage(); }
+	public static MessageBuffer<UUID> createUUID(PacketBuffer origin) { return new MessageBuffer.UUIDMessage(origin); }
+	public static MessageBuffer<UUID> createUUID(ByteBuf wrapper) { return new MessageBuffer.UUIDMessage(wrapper); }
 
-	public static MessageBuffer<UUID> createMessage(UUID id, PacketBuffer origin) {
-		return new MessageBuffer.UUIDMessage(origin).setID(id);
-	}
-
-	public static MessageBuffer<UUID> createMessage(UUID id, ByteBuf wrapper) {
-		return new MessageBuffer.UUIDMessage(wrapper).setID(id);
-	}
-
-	/* MessageType */
+	/* Generic */
 	@SuppressWarnings("unchecked")
-	public static <G extends Data> MessageBuffer<G> createMessage(G id) {
-		return new MessageBuffer.GenericMessage<G>((Class<G>) id.getClass()).setID(id);
-	}
-
+	public static <D extends Data> MessageBuffer<D> create(D id) { return createGeneric((Class<D>) id.getClass()).setID(id); }
 	@SuppressWarnings("unchecked")
-	public static <G extends Data> MessageBuffer<G> createMessage(G id, PacketBuffer origin) {
-		return new MessageBuffer.GenericMessage<G>(origin, (Class<G>) id.getClass()).setID(id);
-	}
-
+	public static <D extends Data> MessageBuffer<D> create(D id, PacketBuffer origin) { return createGeneric((Class<D>) id.getClass(), origin).setID(id); }
 	@SuppressWarnings("unchecked")
-	public static <G extends Data> MessageBuffer<G> createMessage(G id, ByteBuf wrapper) {
-		return new MessageBuffer.GenericMessage<G>(wrapper, (Class<G>) id.getClass()).setID(id);
-	}
+	public static <D extends Data> MessageBuffer<D> create(D id, ByteBuf wrapper) { return createGeneric((Class<D>) id.getClass(), wrapper).setID(id); }
+
+	public static <D extends Data> MessageBuffer<D> createGeneric(Class<D> idClazz) { return new MessageBuffer.GenericMessage<>(idClazz); }
+
+	public static <D extends Data> MessageBuffer<D> createGeneric(Class<D> idClazz, PacketBuffer origin) { return new MessageBuffer.GenericMessage<>(idClazz, origin); }
+
+	public static <D extends Data> MessageBuffer<D> createGeneric(Class<D> idClazz, ByteBuf wrapper) { return new MessageBuffer.GenericMessage<>(idClazz, wrapper); }
 
 }

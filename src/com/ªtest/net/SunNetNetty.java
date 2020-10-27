@@ -92,9 +92,9 @@ public class SunNetNetty {
 //		MessageBuffer<Integer> mb = MessageBuffer.createMessage(10);
 //		MessageBuffer<TestEnum> mb = MessageBuffer.createMessage(TestEnum.class);
 		TestClass tc = new TestClass("");
-//		MessageBuffer<MessageType> mb = MessageBuffer.createMessage(tc);
-		MessageBuffer<TestClass> mb = MessageBuffer.createMessage(TestClass.class);
-		mb.setID(tc);
+		MessageBuffer<TestClass> mb = MessageBuffer.create(tc);
+//		MessageBuffer<TestClass> mb = MessageBuffer.createGeneric(TestClass.class);
+//		mb.setID(tc);
 		System.out.println(mb.getID());
 
 //		mb.writeEnumValue(TestEnum.two);
@@ -114,7 +114,7 @@ public class SunNetNetty {
 //		mb = MessageBuffer.createMessage(Boolean.class);
 //		mb = MessageBuffer.createMessage(Integer.class);
 //		mb = MessageBuffer.createMessage(TestEnum.class);
-		mb = MessageBuffer.createMessage(TestClass.class);
+		mb = MessageBuffer.createGeneric(TestClass.class);
 
 		ByteArrayInputStream bain = new ByteArrayInputStream(bytes);
 		BufferedInputStream bin = new BufferedInputStream(bain);
