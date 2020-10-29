@@ -21,6 +21,8 @@ public class ServerContext extends CommonContext {
 	public ServerContext(ThreadGroup serverThreadGroup, InetSocketAddress endpoint) throws IOException {
 		super(Side.Server, serverThreadGroup);
 		serverSocket = new ServerSocket();
+//		serverSocket.setSendBufferSize(200000);
+//		serverSocket.setReceiveBufferSize(200000);
 		serverSocket.bind(endpoint);
 		Logger.info("SERVER", "Bound to " + serverSocket.getLocalSocketAddress());
 	}
@@ -37,6 +39,10 @@ public class ServerContext extends CommonContext {
 	public void async_accept(Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer) {
 		async_task("servercontext_async_accept", () -> {
 			Socket socket = serverSocket.accept();
+//			socket.setSendBufferSize(200000);
+//			socket.setReceiveBufferSize(200000);
+//			System.out.println(socket.getReceiveBufferSize());
+//			System.out.println(socket.getSendBufferSize());
 			socketConsumer.accept(socket);
 		}, errorConsumer);
 	}

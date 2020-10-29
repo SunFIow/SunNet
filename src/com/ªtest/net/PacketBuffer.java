@@ -14,7 +14,6 @@ import java.util.Date;
 import java.util.UUID;
 
 import com.sun.istack.internal.Nullable;
-import com.sunflow.common.Connection;
 import com.ªtest.net.netty.DecoderException;
 import com.ªtest.net.netty.EncoderException;
 
@@ -24,25 +23,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 
 public class PacketBuffer extends ByteBuf {
-	public static class Owned {
-
-		private Connection remote;
-		private PacketBuffer msg;
-
-		public Owned(Connection connection, PacketBuffer m_msgTemporaryIn) {
-			this.remote = connection;
-			this.msg = m_msgTemporaryIn;
-		}
-
-		@Override
-		public String toString() {
-			return getMessage().toString();
-		}
-
-		public Connection getRemote() { return remote; }
-
-		public PacketBuffer getMessage() { return msg; }
-	}
 
 	private final ByteBuf buf;
 
@@ -59,16 +39,18 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	/**
-	 * Transfers this buffer's data to the specified stream starting at the
-	 * current {@code readerIndex}.
+	 * Transfers this buffer's data to the specified stream
+	 * 
+	 * @return the number of bytes written out to the specified stream
 	 * 
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
 	 */
 	public int write(OutputStream out) throws IOException {
-		int wroteBytes = readableBytes();
-		readBytes(out, wroteBytes);
-		return wroteBytes;
+		int writtenBytes = writerIndex();
+//		readBytes(out, wroteBytes);
+		getBytes(0, out, writtenBytes);
+		return writtenBytes;
 	}
 
 	/**
@@ -80,9 +62,25 @@ public class PacketBuffer extends ByteBuf {
 	 * 
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
+	 * @throws Exception
+	 *             subclasses may override this method throwing additional exceptions
 	 */
-	public int read(InputStream in) throws IOException {
+	public int read(InputStream in) throws Exception {
 		return writeBytes(in, in.available());
+	}
+
+	/**
+	 * Transfers this buffer's data to the specified stream starting at the current readerIndex.
+	 * 
+	 * @return the number of bytes written out to the specified stream
+	 * 
+	 * @throws IOException
+	 *             if the specified stream threw an exception during I/O
+	 */
+	public int writeAndModify(OutputStream out) throws IOException {
+		int writtenBytes = readableBytes();
+		readBytes(out, writtenBytes);
+		return writtenBytes;
 	}
 
 	/**
@@ -110,11 +108,12 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	public <T extends Enum<T>> T readEnumValue(Class<T> enumClass) {
-		return (enumClass.getEnumConstants())[readVarInt()];
+		return (enumClass.getEnumConstants())[readInt()];
 	}
 
 	public PacketBuffer writeEnumValue(Enum<?> value) {
-		return this.writeVarInt(value.ordinal());
+		writeInt(value.ordinal());
+		return this;
 	}
 	// TODO CompoundTag
 	/**
@@ -324,7 +323,7 @@ public class PacketBuffer extends ByteBuf {
 	 * string length exceeds this value!
 	 */
 	public String readString(int maxLength) {
-		int i = this.readVarInt();
+		int i = this.readInt();
 		if (i > maxLength * 4) {
 			throw new DecoderException("The received encoded string buffer length is longer than maximum allowed (" + i + " > " + maxLength * 4 + ")");
 		} else if (i < 0) {
@@ -341,17 +340,18 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	public PacketBuffer writeString(String string) {
-		return this.writeString(string, 32767);
+		writeString(string, 32767);
+		return this;
 	}
 
-	public PacketBuffer writeString(String string, int maxLength) {
+	public int writeString(String string, int maxLength) {
 		byte[] abyte = string.getBytes(StandardCharsets.UTF_8);
 		if (abyte.length > maxLength) {
 			throw new EncoderException("String too big (was " + abyte.length + " bytes encoded, max " + maxLength + ")");
 		} else {
-			this.writeVarInt(abyte.length);
+			this.writeInt(abyte.length);
 			this.writeBytes(abyte);
-			return this;
+			return abyte.length;
 		}
 	}
 
@@ -1241,7 +1241,7 @@ public class PacketBuffer extends ByteBuf {
 
 	@Override
 	public String toString() {
-		return this.buf.toString();
+		return "PacketBuffer{" + this.buf.toString() + "}";
 	}
 
 	@Override

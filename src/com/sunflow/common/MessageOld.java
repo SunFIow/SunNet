@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.Iterator;
 
-public class Message2<T extends Serializable> implements Serializable {
+public class MessageOld<T extends Serializable> implements Serializable {
 	private static final long serialVersionUID = 5130385395145010707L;
 
 	private void writeObject(ObjectOutputStream out) throws IOException {
@@ -38,9 +38,9 @@ public class Message2<T extends Serializable> implements Serializable {
 	private T id;
 	private ArrayDeque<Serializable> body;
 
-	public Message2() { body = new ArrayDeque<>(); }
+	public MessageOld() { body = new ArrayDeque<>(); }
 
-	public Message2(T id) { this(); this.id = id; }
+	public MessageOld(T id) { this(); this.id = id; }
 
 	/**
 	 * @return the id of this message
@@ -111,12 +111,12 @@ public class Message2<T extends Serializable> implements Serializable {
 	/**
 	 * Put any number of Serializable data onto the end of the message buffer
 	 */
-	public <DataType extends Serializable> Message2<T> put(@SuppressWarnings("unchecked") DataType... data) { for (DataType d : data) put(d); return this; }
+	public <DataType extends Serializable> MessageOld<T> put(@SuppressWarnings("unchecked") DataType... data) { for (DataType d : data) put(d); return this; }
 
 	/**
 	 * Put any Serializable data onto the end of the message buffer
 	 */
-	public <DataType extends Serializable> Message2<T> put(DataType data) {
+	public <DataType extends Serializable> MessageOld<T> put(DataType data) {
 		// Add the data to the body
 		body.add(data);
 		// Return the target message so it can be "chained"

@@ -31,8 +31,8 @@ public class Logger {
 	}
 
 	public static void help(Object msg) {
-		if (!Settings.logHelpfully) return;
-		log(System.out, "HELPFULLY", msg);
+		if (!Settings.logHelp) return;
+		log(System.out, "HELPF", msg);
 	}
 
 	public static void debug(Object msg) {
@@ -65,8 +65,8 @@ public class Logger {
 	}
 
 	public static void help(Object marker, Object msg) {
-		if (!Settings.logHelpfully) return;
-		log(System.out, "HELPFULLY", marker, msg);
+		if (!Settings.logHelp) return;
+		log(System.out, "HELP", marker, msg);
 	}
 
 	public static void debug(Object marker, Object msg) {

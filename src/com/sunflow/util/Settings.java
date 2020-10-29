@@ -6,7 +6,7 @@ public class Settings {
 			logErrors = true,
 			logWarnings = true,
 			logInfos = true,
-			logHelpfully = true,
+			logHelp = true,
 			logDebugs = false;
 
 }

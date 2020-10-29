@@ -4,7 +4,7 @@ public enum CustomMsgTypes {
 	ServerAccept,
 	ServerDeny,
 	ServerPing,
-	ServerPing2,
+	ServerPingFull,
 	MessageAll,
 	ServerMessage,
 }

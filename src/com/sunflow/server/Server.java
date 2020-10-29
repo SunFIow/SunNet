@@ -2,6 +2,7 @@ package com.sunflow.server;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
@@ -14,7 +15,6 @@ import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
 import com.ªtest.net.MessageBuffer;
-import com.ªtest.net.PacketBuffer;
 
 public class Server {
 
@@ -25,7 +25,9 @@ public class Server {
 	 * @param <T>
 	 *            The type of messages
 	 */
-	public static class Interface<T> implements Closeable {
+	public static class Interface<T extends Serializable> implements Closeable {
+
+		protected MessageBuffer<T> blankMessage() { return null; };
 
 		@Override
 		public void close() {
@@ -37,12 +39,13 @@ public class Server {
 		 * Thread Safe Queue for incoming message packets
 		 */
 //		protected TSQueue<Message.Owned<T>> m_qMessagesIn;
-		protected TSQueue<PacketBuffer.Owned> m_qMessagesIn;
+//		protected TSQueue<MixedMessage.Owned<T>> m_qMessagesIn;
+		protected TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
 
 		/**
 		 * Container of active validated connections
 		 */
-		protected Deque<Connection> m_deqConnections;
+		protected Deque<Connection<T>> m_deqConnections;
 
 		/**
 		 * Main ThreadGroup of the server <br>
@@ -306,7 +309,7 @@ public class Server {
 				// Triggered by incoming connection request
 				Logger.info("SERVER", "New Connection: (" + socket.getRemoteSocketAddress() + ")");
 
-				Connection newconn = new Connection(Side.Server, m_context, socket, m_qMessagesIn);
+				Connection<T> newconn = new Connection<>(Side.Server, m_context, socket, m_qMessagesIn, this::blankMessage);
 
 				// Give the server impl a chance to deny connection
 				if (onClientConnect(newconn, nIDCounter)) {
@@ -335,8 +338,9 @@ public class Server {
 		 * @param msg
 		 *            The message
 		 */
-//		public void messageClient(Connection<T> client, final Message<T> msg) {
-		public void messageClient(Connection client, final MessageBuffer<T> msg) {
+//		public void messageClient(Connection<T> client, Message<T> msg) {
+//		public void messageClient(Connection<T> client, MixedMessage<T> msg) {
+		public void messageClient(Connection<T> client, MessageBuffer<T> msg) {
 			// Check client is connected...
 			if (client != null && client.isConnected())
 				client.send(msg);
@@ -352,8 +356,9 @@ public class Server {
 		 * @param msg
 		 *            The message
 		 */
-//		public void messageAllClients(final Message<T> msg) { messageAllClients(msg, null); }
-		public void messageAllClients(final PacketBuffer msg) { messageAllClients(msg, null); }
+//		public void messageAllClients(Message<T> msg) { messageAllClients(msg, null); }
+//		public void messageAllClients(MixedMessage<T> msg) { messageAllClients(msg, null); }
+		public void messageAllClients(MessageBuffer<T> msg) { messageAllClients(msg, null); }
 
 		/**
 		 * Send a message to all clients except the ignored one
@@ -363,9 +368,10 @@ public class Server {
 		 * @param ignoreClient
 		 *            The client to ignore, null to send to everybody
 		 */
-//		public void messageAllClients(final Message<T> msg, Connection<T> ignoreClient) {
-		public void messageAllClients(final PacketBuffer msg, Connection ignoreClient) {
-			for (Connection client : m_deqConnections) {
+//		public void messageAllClients(Message<T> msg, Connection<T> ignoreClient) {
+//		public void messageAllClients(MixedMessage<T> msg, Connection<T> ignoreClient) {
+		public void messageAllClients(MessageBuffer<T> msg, Connection<T> ignoreClient) {
+			for (Connection<T> client : m_deqConnections) {
 				// Check client is connected...
 				if (client != null && client.isConnected()) {
 					// Check that it's not the client we want to ignore
@@ -392,8 +398,8 @@ public class Server {
 			int messageCount = 0;
 			while (messageCount < maxMessages && !m_qMessagesIn.empty()) {
 				// Grab the front message
-//				Message.Owned<T> msg = m_qMessagesIn.pop_front();
-				PacketBuffer.Owned msg = m_qMessagesIn.pop_front();
+//				MixedMessage.Owned<T> msg = m_qMessagesIn.pop_front();
+				MessageBuffer.Owned<T> msg = m_qMessagesIn.pop_front();
 
 				// Pass to message handler
 				onMessage(msg.getRemote(), msg.getMessage());
@@ -408,7 +414,7 @@ public class Server {
 		 * @param client
 		 *            that couldn't be contacted
 		 */
-		private void clientNotConnected(Connection client) {
+		private void clientNotConnected(Connection<T> client) {
 			onClientDisconnect(client);
 			m_deqConnections.remove(client);
 			client.disconnect();
@@ -422,7 +428,7 @@ public class Server {
 		 *            The connecting client
 		 * @return true to allow the connection, false to deny the connection
 		 */
-		protected boolean onClientConnect(Connection client, int clientID) { return false; }
+		protected boolean onClientConnect(Connection<T> client, int clientID) { return false; }
 
 		/**
 		 * Called when a client appears to have disconnected
@@ -430,7 +436,7 @@ public class Server {
 		 * @param client
 		 *            The disconnected client
 		 */
-		protected void onClientDisconnect(Connection client) {}
+		protected void onClientDisconnect(Connection<T> client) {}
 
 		/**
 		 * Called when a message arrives
@@ -441,6 +447,7 @@ public class Server {
 		 *            The message
 		 */
 //		protected void onMessage(Connection<T> client, Message<T> msg) {}
-		protected void onMessage(Connection client, PacketBuffer msg) {}
+//		protected void onMessage(Connection<T> client, MixedMessage<T> msg) {}
+		protected void onMessage(Connection<T> client, MessageBuffer<T> msg) {}
 	}
 }

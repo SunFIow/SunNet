@@ -12,7 +12,6 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.Callable;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -138,13 +137,11 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, errorConsumer);
 	}
 
-	public void async_write(Socket socket, PacketBuffer data,
+	public void async_write(Socket socket, PacketBuffer buffer,
 			Consumer<Integer> successConsumer, Consumer<Exception> errorConsumer) {
 		async_task(side + "_context_async_write", () -> {
-			OutputStream rawout = socket.getOutputStream();
-			BufferedOutputStream out = new BufferedOutputStream(rawout);
-			int wroteBytes = data.write(out);
-			out.flush();
+			OutputStream out = socket.getOutputStream();
+			int wroteBytes = buffer.write(out);
 			successConsumer.accept(wroteBytes);
 		}, errorConsumer);
 	}
@@ -207,20 +204,12 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, errorConsumer);
 	}
 
-	public <T> void async_read(Socket socket,
-			BiConsumer<PacketBuffer, Integer> messageConsumer, Consumer<Exception> errorConsumer) {
+	public void async_read(Socket socket, PacketBuffer buffer,
+			Consumer<Integer> messageConsumer, Consumer<Exception> errorConsumer) {
 		async_task(side + "_context_async_read", () -> {
-			PacketBuffer buffer = new PacketBuffer();
-			InputStream rawin = socket.getInputStream();
-			BufferedInputStream in = new BufferedInputStream(rawin);
-			Logger.debug("read 0");
-			while (in.available() == 0) {
-
-			}
-			Logger.debug("read 1");
-//			Thread.sleep(10);
+			InputStream in = socket.getInputStream();
 			int readBytes = buffer.read(in);
-			messageConsumer.accept(buffer, readBytes);
+			messageConsumer.accept(readBytes);
 		}, errorConsumer);
 	}
 

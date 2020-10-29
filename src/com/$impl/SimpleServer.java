@@ -7,11 +7,15 @@ import com.sunflow.common.Connection;
 import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
 import com.ªtest.net.MessageBuffer;
-import com.ªtest.net.PacketBuffer;
 
 public class SimpleServer {
 
-	class CustomServer extends Server.Interface {
+	class CustomServer extends Server.Interface<CustomMsgTypes> {
+
+		@Override
+		public MessageBuffer<CustomMsgTypes> blankMessage() {
+			return MessageBuffer.createEnum(CustomMsgTypes.class);
+		}
 
 		public CustomServer() { super(); }
 
@@ -24,10 +28,11 @@ public class SimpleServer {
 		public CustomServer(InetSocketAddress endpoint) { super(endpoint); }
 
 		@Override
-		protected boolean onClientConnect(Connection client, int clientID) {
+		protected boolean onClientConnect(Connection<CustomMsgTypes> client, int clientID) {
 			// Accept every connection
 			boolean accept = true;
 //			Message<CustomMsgTypes> msg = new Message<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
 			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
 //			msg.put(clientID);
 			msg.writeVarInt(clientID);
@@ -36,7 +41,7 @@ public class SimpleServer {
 		}
 
 		@Override
-		protected void onClientDisconnect(Connection client) {
+		protected void onClientDisconnect(Connection<CustomMsgTypes> client) {
 			Logger.info("Server", "Removing client (" + client.getID() + ")");
 		}
 
@@ -44,9 +49,10 @@ public class SimpleServer {
 
 		@Override
 //		protected void onMessage(Connection<CustomMsgTypes> client, Message<CustomMsgTypes> msg) {
-		protected void onMessage(Connection client, PacketBuffer buffer) {
+//		protected void onMessage(Connection<CustomMsgTypes> client, MixedMessage<CustomMsgTypes> msg) {
+		protected void onMessage(Connection<CustomMsgTypes> client, MessageBuffer<CustomMsgTypes> msg) {
 			try {
-				MessageBuffer<CustomMsgTypes> msg = MessageBuffer.createEnum(CustomMsgTypes.class, buffer);
+//				MessageBuffer<CustomMsgTypes> msg = MessageBuffer.createEnum(CustomMsgTypes.class, buffer);
 				switch (msg.getID()) {
 					case ServerPing:
 						Logger.info("Server", "(" + client.getID() + ") Server Ping");
@@ -55,7 +61,7 @@ public class SimpleServer {
 						client.send(msg);
 						break;
 
-					case ServerPing2:
+					case ServerPingFull:
 						Logger.info("Server", "(" + client.getID() + ") Server Ping2");
 
 						// Simply bounce back to client
@@ -64,9 +70,11 @@ public class SimpleServer {
 
 					case MessageAll:
 						Logger.info("Server", "(" + client.getID() + ") Message All");
-//					msg = new Message<>(CustomMsgTypes.ServerMessage);
+//						msg = new Message<>(CustomMsgTypes.ServerMessage);
+//						msg.put(client.getID());
+
+//						msg = new MixedMessage<>(CustomMsgTypes.ServerMessage);
 						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
-//					msg.put(client.getID());
 						msg.writeVarInt(client.getID());
 						messageAllClients(msg, client);
 						break;

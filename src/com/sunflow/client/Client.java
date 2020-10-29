@@ -1,6 +1,7 @@
 package com.sunflow.client;
 
 import java.io.Closeable;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
@@ -10,7 +11,7 @@ import com.sunflow.error.ConnectingException;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
-import com.ªtest.net.PacketBuffer;
+import com.ªtest.net.MessageBuffer;
 
 public class Client {
 
@@ -18,7 +19,9 @@ public class Client {
 	 * @param <T>
 	 *            The type of messages
 	 */
-	public static class Interface implements Closeable {
+	public static abstract class Interface<T extends Serializable> implements Closeable {
+
+		protected MessageBuffer<T> blankMessage() { return null; };
 
 		/**
 		 * If the client is destroyed, always try and disconnect from server
@@ -49,17 +52,17 @@ public class Client {
 		 * The client has a single instance of a "connection" object,
 		 * which handles data transfer
 		 */
-//		protected Connection<T> m_connection;
-		protected Connection m_connection;
+		protected Connection<T> m_connection;
 
 		/**
 		 * This is the thread safe queue of incoming messages from the server
 		 */
 //		private TSQueue<Message.Owned<T>> m_qMessagesIn;
-		private TSQueue<PacketBuffer.Owned> m_qMessagesIn;
+//		private TSQueue<MixedMessage.Owned<T>> m_qMessagesIn;
+		private TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
 
 		public Interface() {
-			m_qMessagesIn = new TSQueue<>();
+			this.m_qMessagesIn = new TSQueue<>();
 		}
 
 		/**
@@ -109,7 +112,7 @@ public class Client {
 			m_context.connect(endpoint, socket -> {
 //				SocketAddress clientEndpoint = socket.getLocalSocketAddress();
 				Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
-				m_connection = new Connection(Side.Client, m_context, socket, m_qMessagesIn);
+				m_connection = new Connection<>(Side.Client, m_context, socket, m_qMessagesIn, this::blankMessage);
 				m_connection.connectToServer();
 			}, error -> Logger.error("CLIENT", "couldn't connect", new ConnectingException("", error)));
 
@@ -165,10 +168,12 @@ public class Client {
 		 * Retrieve queue of messages from server
 		 */
 //		public TSQueue<Message.Owned<T>> incoming() { return m_qMessagesIn; };
-		public TSQueue<PacketBuffer.Owned> incoming() { return m_qMessagesIn; };
+//		public TSQueue<MixedMessage.Owned<T>> incoming() { return m_qMessagesIn; };
+		public TSQueue<MessageBuffer.Owned<T>> incoming() { return m_qMessagesIn; };
 
 //		public void send(Message<T> msg) {
-		public void send(PacketBuffer msg) {
+//		public void send(MixedMessage<T> msg) {
+		public void send(MessageBuffer<T> msg) {
 			if (isConnected())
 				m_connection.send(msg);
 		}
@@ -188,7 +193,8 @@ public class Client {
 			while (messageCount < maxMessages && !m_qMessagesIn.empty()) {
 				// Grab the front message
 //				Message.Owned<T> msg = m_qMessagesIn.pop_front();
-				PacketBuffer.Owned msg = m_qMessagesIn.pop_front();
+//				MixedMessage.Owned<T> msg = m_qMessagesIn.pop_front();
+				MessageBuffer.Owned<T> msg = m_qMessagesIn.pop_front();
 
 				// Pass to message handler
 				onMessage(msg.getMessage());
@@ -204,6 +210,7 @@ public class Client {
 		 *            The message
 		 */
 //		protected void onMessage(Message<T> msg) {}
-		protected void onMessage(PacketBuffer msg) {}
+//		protected void onMessage(MixedMessage<T> msg) {}
+		protected void onMessage(MessageBuffer<T> msg) {}
 	}
 }

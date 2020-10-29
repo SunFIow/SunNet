@@ -7,6 +7,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
 import com.sunflow.error.DisconnectException;
 import com.sunflow.error.ReadMessageException;
@@ -15,9 +16,9 @@ import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
 import com.sunflow.util.Utils;
-import com.ªtest.net.PacketBuffer;
+import com.ªtest.net.MessageBuffer;
 
-public class Connection {
+public class Connection<T> {
 
 	/**
 	 * Each connection has a unique socket to a remote
@@ -34,7 +35,8 @@ public class Connection {
 	 * of this connection
 	 */
 //	protected TSQueue<Message<T>> m_qMessagesOut;
-	protected TSQueue<PacketBuffer> m_qMessagesOut;
+//	protected TSQueue<MixedMessage<T>> m_qMessagesOut;
+	protected TSQueue<MessageBuffer<T>> m_qMessagesOut;
 
 	/**
 	 * This queue holds all messages that have been recieved from
@@ -42,7 +44,10 @@ public class Connection {
 	 * as the "owner" of this connection is expected to provide a queue
 	 */
 //	protected TSQueue<Message.Owned<T>> m_qMessagesIn;
-	protected TSQueue<PacketBuffer.Owned> m_qMessagesIn;
+//	protected TSQueue<MixedMessage.Owned<T>> m_qMessagesIn;
+	protected TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
+
+	private Supplier<MessageBuffer<T>> messageFactory;
 
 	/**
 	 * A connection is "owned" by either a server or a client, and its
@@ -83,7 +88,8 @@ public class Connection {
 	 * @param qIn
 	 */
 //	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<Message.Owned<T>> qIn) {
-	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<PacketBuffer.Owned> qIn) {
+//	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<MixedMessage.Owned<T>> qIn) {
+	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<MessageBuffer.Owned<T>> qIn, Supplier<MessageBuffer<T>> messageFactory) {
 		this.m_context = m_context;
 		this.m_socket = socket;
 		this.m_qMessagesIn = qIn;
@@ -91,6 +97,7 @@ public class Connection {
 		this.m_nOwnerType = parent;
 
 		this.m_qMessagesOut = new TSQueue<>();
+		this.messageFactory = messageFactory;
 		this.id = -1;
 		this.outputStream = Utils.getCachedCallable(() -> getObjectOutputStream(socket));
 	}
@@ -144,8 +151,9 @@ public class Connection {
 	 * @ASYNC Send a message, connections are one-to-one so no need to specifiy
 	 *        the target, for a client, the target is the server and vice versa
 	 */
-//	public void send(final Message<T> msg) {
-	public void send(final PacketBuffer msg) {
+//	public void send(Message<T> msg) {
+//	public void send(MixedMessage<T> msg) {
+	public void send(MessageBuffer<T> msg) {
 		m_context.post(m_nOwnerType + "_connection_send", () -> {
 			/*
 			 * If the queue has a message in it, then we must
@@ -184,7 +192,9 @@ public class Connection {
 	 */
 	private void readMessage() {
 //		m_context.async_read(inputStream, (Message<T> msg) -> {
-		m_context.async_read(m_socket, (msg, readBytes) -> {
+//		MixedMessage<T> msg = new MixedMessage<>();
+		MessageBuffer<T> msg = messageFactory.get();
+		m_context.async_read(m_socket, msg, readBytes -> {
 			// A complete message has been read
 			Logger.help(Thread.currentThread(), "Read Message of length " + readBytes + ": " + msg);
 			addToIncomingMessageQueue(msg);
@@ -194,7 +204,6 @@ public class Connection {
 			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't read message:" + new ReadMessageException(error));
 			// ... so disconnect it
 			disconnect();
-
 		});
 	}
 
@@ -217,8 +226,10 @@ public class Connection {
 //	}
 
 //	private void addToIncomingMessageQueue(Message<T> msg) {
-	private void addToIncomingMessageQueue(PacketBuffer msg) {
+//	private void addToIncomingMessageQueue(MixedMessage<T> msg) {
+	private void addToIncomingMessageQueue(MessageBuffer<T> msg) {
 //		m_qMessagesIn.push_back(new Message.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg)); 
-		m_qMessagesIn.push_back(new PacketBuffer.Owned(m_nOwnerType == Side.Server ? this : null, msg));
+//		m_qMessagesIn.push_back(new MixedMessage.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg));
+		m_qMessagesIn.push_back(new MessageBuffer.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg));
 	}
 }

@@ -1,5 +1,7 @@
 package com.ªtest.net;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -7,47 +9,142 @@ import java.lang.reflect.Constructor;
 import java.util.Date;
 import java.util.UUID;
 
+import com.sunflow.common.Connection;
 import com.sunflow.util.Logger;
 
 import io.netty.buffer.ByteBuf;
 
 public abstract class MessageBuffer<T> extends PacketBuffer {
+	public static class Owned<T> {
+
+		private Connection<T> remote;
+		private MessageBuffer<T> msg;
+
+		public Owned(Connection<T> connection, MessageBuffer<T> m_msgTemporaryIn) {
+			this.remote = connection;
+			this.msg = m_msgTemporaryIn;
+		}
+
+		@Override
+		public String toString() {
+			return getMessage().toString();
+		}
+
+		public Connection<T> getRemote() { return remote; }
+
+		public MessageBuffer<T> getMessage() { return msg; }
+	}
+
+	@Override
+	public String toString() {
+		return "MessageBuffer<" + id + ">{" + super.toString() + "}";
+	}
 
 	private T id;
 
 	private MessageBuffer() { super(); }
 
-	private MessageBuffer(PacketBuffer origin) { super(origin); }
+//	private MessageBuffer(MessageBuffer<T> origin) { super(origin); }
+
+//	private MessageBuffer(PacketBuffer origin) { super(origin); }
 
 	private MessageBuffer(ByteBuf wrapped) { super(wrapped); }
 
-	public T getID() { checkID(); return id; }
+	public T getID() { return id; }
 
 	public MessageBuffer<T> setID(T id) { this.id = id; return this; }
 
+	/**
+	 * @return byte size of the header (idSize + dataSize[4])
+	 */
+	public int headerSize() { return idSize() + 4; }
+
+	/**
+	 * @return byte size of the identifier
+	 */
+	public abstract int idSize();
+
 	@Override
 	public int write(OutputStream out) throws IOException {
-		boolean hasID = id != null;
-		PacketBuffer idbuffer = new PacketBuffer();
+		BufferedOutputStream bout = new BufferedOutputStream(out);
+		PacketBuffer header = new PacketBuffer();
+		writeID(header);
+		header.writeInt(writerIndex());
 
-		idbuffer.writeBoolean(hasID);
-		if (hasID) writeID(idbuffer);
-		idbuffer.write(out);
+		Logger.warn("write header to outputstream");
+		int headerSize = header.write(bout);
+		Logger.warn("write data to outputstream");
+		int dataSize = super.write(bout);
+		Logger.info("headerSize: " + headerSize + ", dataSize: " + dataSize);
 
-		return super.write(out);
+		Logger.warn("flush outputstream");
+		bout.flush();
+		Logger.warn("flushed outputstream");
+
+		return headerSize + dataSize;
 	}
 
+	/**
+	 * Reads in the message from the InputStream
+	 * 
+	 * @return the data size
+	 * 
+	 * @throws IOException
+	 *             if the specified stream threw an exception during I/O
+	 */
 	@Override
 	public int read(InputStream in) throws IOException {
-		int readBytes = super.read(in);
-		return readBytes;
+		BufferedInputStream bin = new BufferedInputStream(in);
+
+		// Read in the message header
+		int dataSize = readHeader(bin, headerSize());
+
+		// Read in the message data
+		readData(bin, dataSize);
+
+		// Return the message data size
+		return dataSize;
 	}
 
-	/* Call this function once to read the ID */
-	private void checkID() {
-		if (id != null) return;
-		boolean hasID = readBoolean();
-		if (hasID) _readID();
+	/**
+	 * Reads in the message header from the InputStream
+	 * 
+	 * @return the data size
+	 * @throws IOException
+	 *             if the specified stream threw an exception during I/O
+	 */
+	private int readHeader(InputStream in, int headerSize) throws IOException {
+		Logger.warn("HS: " + headerSize);
+		while (in.available() < headerSize) {}
+		Logger.warn("Header arrived");
+		readerIndex(0);
+		writerIndex(0);
+		writeBytes(in, headerSize);
+		_readID();
+
+		int dataSize = readInt();
+
+		readerIndex(0);
+		writerIndex(0);
+		return dataSize;
+	}
+
+	/**
+	 * Reads in the message data from the InputStream
+	 * 
+	 * @throws IOException
+	 *             if the specified stream threw an exception during I/O
+	 */
+	private void readData(InputStream in, int dataSize) throws IOException {
+		if (dataSize == 0) return;
+		Logger.warn("DS: " + dataSize);
+		int readBytes = 0;
+		while (readBytes < dataSize) {
+			int _readBytes = writeBytes(in, dataSize - readBytes);
+			readBytes += _readBytes;
+			System.out.println(readBytes + "/" + dataSize + " - (" + _readBytes + ")");
+		}
+		Logger.warn("Data arrived");
 	}
 
 	protected abstract PacketBuffer writeID(PacketBuffer idbuffer);
@@ -64,13 +161,18 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public EnumMessage(Class<E> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
+		public int idSize() { return 4; }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
-			idbuffer.writeEnumValue(super.id);
+			E id = super.id != null ? super.id : idClazz.getEnumConstants()[0];
+			System.out.println("enum: " + id);
+			idbuffer.writeEnumValue(id);
 			return idbuffer;
 		}
 
 		@Override
-		protected void _readID() { Logger.warn("MessageBuffer", idClazz); setID(readEnumValue(idClazz)); }
+		protected void _readID() { Logger.help("MessageBuffer", idClazz); setID(readEnumValue(idClazz)); }
 	}
 
 	public static class BooleanMessage extends MessageBuffer<Boolean> {
@@ -80,6 +182,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public BooleanMessage(PacketBuffer origin) { super(origin); }
 
 		public BooleanMessage(ByteBuf wrapped) { super(wrapped); }
+
+		@Override
+		public int idSize() { return 1; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -100,6 +205,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public ByteMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
+		public int idSize() { return 1; }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
 			idbuffer.writeByte(super.id);
 			return idbuffer;
@@ -118,7 +226,11 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public ShortMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
+		public int idSize() { return 2; }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
+			System.out.println(idbuffer + " " + super.id);
 			idbuffer.writeShort(super.id);
 			return idbuffer;
 		}
@@ -136,13 +248,16 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public IntegerMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
+		public int idSize() { return 4; }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
-			idbuffer.writeVarInt(super.id);
+			idbuffer.writeInt(super.id);
 			return idbuffer;
 		}
 
 		@Override
-		protected void _readID() { setID(readVarInt()); }
+		protected void _readID() { setID(readInt()); }
 	}
 
 	public static class LongMessage extends MessageBuffer<Long> {
@@ -154,13 +269,16 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public LongMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
+		public int idSize() { return 8; }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
-			idbuffer.writeVarLong(super.id);
+			idbuffer.writeLong(super.id);
 			return idbuffer;
 		}
 
 		@Override
-		protected void _readID() { setID(readVarLong()); }
+		protected void _readID() { setID(readLong()); }
 	}
 
 	public static class FloatMessage extends MessageBuffer<Float> {
@@ -170,6 +288,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public FloatMessage(PacketBuffer origin) { super(origin); }
 
 		public FloatMessage(ByteBuf wrapped) { super(wrapped); }
+
+		@Override
+		public int idSize() { return 4; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -190,6 +311,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public DoubleMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
+		public int idSize() { return 8; }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
 			idbuffer.writeDouble(super.id);
 			return idbuffer;
@@ -208,6 +332,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public CharacterMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
+		public int idSize() { return 2; }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
 			idbuffer.writeChar(super.id);
 			return idbuffer;
@@ -217,24 +344,6 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		protected void _readID() { setID(readChar()); }
 	}
 
-	public static class StringMessage extends MessageBuffer<String> {
-
-		public StringMessage() { super(); }
-
-		public StringMessage(PacketBuffer origin) { super(origin); }
-
-		public StringMessage(ByteBuf wrapped) { super(wrapped); }
-
-		@Override
-		protected PacketBuffer writeID(PacketBuffer idbuffer) {
-			idbuffer.writeString(super.id);
-			return idbuffer;
-		}
-
-		@Override
-		protected void _readID() { setID(readString()); }
-	}
-
 	public static class TimeMessage extends MessageBuffer<Date> {
 
 		public TimeMessage() { super(); }
@@ -242,6 +351,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public TimeMessage(PacketBuffer origin) { super(origin); }
 
 		public TimeMessage(ByteBuf wrapped) { super(wrapped); }
+
+		@Override
+		public int idSize() { return 8; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -260,6 +372,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public UUIDMessage(PacketBuffer origin) { super(origin); }
 
 		public UUIDMessage(ByteBuf wrapped) { super(wrapped); }
+
+		@Override
+		public int idSize() { return 16; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -282,15 +397,23 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public GenericMessage(Class<G> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
+		public int idSize() { return _getID().idSize(); }
+
+		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
-//			idbuffer.write(super.id);
-			super.id.write(idbuffer);
+			_getID().write(idbuffer);
 			return idbuffer;
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		protected void _readID() {
+			super.id = _getID();
+			super.id.read(this);
+		}
+
+		@SuppressWarnings("unchecked")
+		private G _getID() {
+			if (super.id != null) return super.id;
 			try {
 				Constructor<?>[] ctors = idClazz.getDeclaredConstructors();
 				Constructor<?> ctor = null;
@@ -303,11 +426,11 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 						ctor = cctor;
 					}
 				}
-				super.id = (G) ctor.newInstance(new Object[minLen]);
-				super.id.read(this);
+				return (G) ctor.newInstance(new Object[minLen]);
 			} catch (ReflectiveOperationException | IllegalArgumentException e) {
 				e.printStackTrace();
 			}
+			return null;
 		}
 	}
 
@@ -427,19 +550,6 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	public static MessageBuffer<Character> createCharacter(PacketBuffer origin) { return new MessageBuffer.CharacterMessage(origin); }
 
 	public static MessageBuffer<Character> createCharacter(ByteBuf wrapper) { return new MessageBuffer.CharacterMessage(wrapper); }
-
-	/* String */
-	public static MessageBuffer<String> create(String id) { return createString().setID(id); }
-
-	public static MessageBuffer<String> create(String id, PacketBuffer origin) { return createString(origin).setID(id); }
-
-	public static MessageBuffer<String> create(String id, ByteBuf wrapper) { return createString(wrapper).setID(id); }
-
-	public static MessageBuffer<String> createString() { return new MessageBuffer.StringMessage(); }
-
-	public static MessageBuffer<String> createString(PacketBuffer origin) { return new MessageBuffer.StringMessage(origin); }
-
-	public static MessageBuffer<String> createString(ByteBuf wrapper) { return new MessageBuffer.StringMessage(wrapper); }
 
 	/* Time */
 	public static MessageBuffer<Date> create(Date id) { return createTime().setID(id); }

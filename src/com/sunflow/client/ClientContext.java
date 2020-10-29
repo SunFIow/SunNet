@@ -33,8 +33,12 @@ public class ClientContext extends CommonContext {
 		task("clientcontext_connect", () -> {
 			// Create Socket
 			socket = new Socket();
+//			socket.setSendBufferSize(200000);
+//			socket.setReceiveBufferSize(200000);
 			// And try to connect to Server
 			socket.connect(serverEndpoint, 5000);
+//			System.out.println(socket.getReceiveBufferSize());
+//			System.out.println(socket.getSendBufferSize());
 			socketConsumer.accept(socket);
 		}, errorConsumer);
 	}
