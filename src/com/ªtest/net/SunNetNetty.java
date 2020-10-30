@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import com.$impl.CustomMsgTypes;
 
 public class SunNetNetty {
-	public static class TestClass implements Data {
+	public static class TestClass implements Identifier {
 
 		private String name;
 //		public TestClass() {}
@@ -24,7 +24,7 @@ public class SunNetNetty {
 		public TestClass(String s) { name = s; }
 
 		@Override
-		public int idSize() { return 54; } // 50 + 4
+		public int headerSize() { return 54; } // 50 + 4
 
 		@Override
 		public void write(PacketBuffer buffer) {
@@ -149,7 +149,7 @@ public class SunNetNetty {
 //		while (in.available() < msg.headerSize()) {
 //
 //		}
-		System.out.println("idSize: " + msg.idSize());
+		System.out.println("idSize: " + msg.headerSize());
 		msg.read(in);
 		System.out.println(msg.getID());
 		System.out.println(msg.readVarLong());

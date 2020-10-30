@@ -7,15 +7,15 @@ import com.sunflow.common.Connection;
 import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
 import com.ªtest.net.MessageBuffer;
+import com.ªtest.net.MixedMessage;
 
 public class SimpleServer {
 
 	class CustomServer extends Server.Interface<CustomMsgTypes> {
 
 		@Override
-		public MessageBuffer<CustomMsgTypes> blankMessage() {
-			return MessageBuffer.createEnum(CustomMsgTypes.class);
-		}
+//		public MessageBuffer<CustomMsgTypes> blankMessage() { return MessageBuffer.createEnum(CustomMsgTypes.class); }
+		public MessageBuffer<CustomMsgTypes> blankMessage() { return new MixedMessage<>(); }
 
 		public CustomServer() { super(); }
 
@@ -32,8 +32,8 @@ public class SimpleServer {
 			// Accept every connection
 			boolean accept = true;
 //			Message<CustomMsgTypes> msg = new Message<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
 //			msg.put(clientID);
 			msg.writeVarInt(clientID);
 			client.send(msg);

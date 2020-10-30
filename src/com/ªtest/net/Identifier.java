@@ -1,7 +1,7 @@
 package com.ªtest.net;
 
-public interface Data {
-	int idSize();
+public interface Identifier {
+	int headerSize();
 
 	void write(PacketBuffer buffer);
 

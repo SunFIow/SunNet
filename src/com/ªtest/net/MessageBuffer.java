@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
+import java.net.SocketException;
 import java.util.Date;
 import java.util.UUID;
 
@@ -42,13 +43,13 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 
 	private T id;
 
-	private MessageBuffer() { super(); }
+	MessageBuffer() { super(); }
 
-//	private MessageBuffer(MessageBuffer<T> origin) { super(origin); }
+	MessageBuffer(MessageBuffer<T> origin) { super(origin); }
 
-//	private MessageBuffer(PacketBuffer origin) { super(origin); }
+	MessageBuffer(PacketBuffer origin) { super(origin); }
 
-	private MessageBuffer(ByteBuf wrapped) { super(wrapped); }
+	MessageBuffer(ByteBuf wrapped) { super(wrapped); }
 
 	public T getID() { return id; }
 
@@ -57,31 +58,56 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	/**
 	 * @return byte size of the header (idSize + dataSize[4])
 	 */
-	public int headerSize() { return idSize() + 4; }
+//	public int headerSize() { return idSize() + 4; }
 
 	/**
 	 * @return byte size of the identifier
 	 */
-	public abstract int idSize();
+	public abstract int headerSize();
 
+	/**
+	 * Write this message out to the specified stream
+	 * 
+	 * @return the size of this message in bytes written to the specified stream
+	 */
 	@Override
 	public int write(OutputStream out) throws IOException {
-		BufferedOutputStream bout = new BufferedOutputStream(out);
+		OutputStream bout = new BufferedOutputStream(out);
+
+		Logger.warn("write header to outputstream");
+		int headerSize = writeHeader(bout);
+
+		Logger.warn("write data to outputstream");
+		int dataSize = writeData(bout);
+
+		Logger.info("headerSize: " + headerSize + ", dataSize: " + dataSize);
+
+//		Logger.warn("flush outputstream");
+//		bout.flush();
+//		Logger.warn("flushed outputstream");
+
+		return headerSize + dataSize;
+	}
+
+	/**
+	 * @return byte size of the message header
+	 */
+	int writeHeader(OutputStream out) throws IOException {
 		PacketBuffer header = new PacketBuffer();
 		writeID(header);
 		header.writeInt(writerIndex());
+		int headerSize = header.write(out);
+		out.flush();
+		return headerSize;
+	}
 
-		Logger.warn("write header to outputstream");
-		int headerSize = header.write(bout);
-		Logger.warn("write data to outputstream");
-		int dataSize = super.write(bout);
-		Logger.info("headerSize: " + headerSize + ", dataSize: " + dataSize);
-
-		Logger.warn("flush outputstream");
-		bout.flush();
-		Logger.warn("flushed outputstream");
-
-		return headerSize + dataSize;
+	/**
+	 * @return byte size of the message data
+	 */
+	int writeData(OutputStream out) throws IOException {
+		int dataSize = super.write(out);
+		out.flush();
+		return dataSize;
 	}
 
 	/**
@@ -94,13 +120,15 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	 */
 	@Override
 	public int read(InputStream in) throws IOException {
-		BufferedInputStream bin = new BufferedInputStream(in);
+		InputStream bin = new BufferedInputStream(in);
 
 		// Read in the message header
-		int dataSize = readHeader(bin, headerSize());
+		int dataSize = readHeader(bin);
 
 		// Read in the message data
 		readData(bin, dataSize);
+
+		Logger.debug("Read Data Successfully");
 
 		// Return the message data size
 		return dataSize;
@@ -113,13 +141,18 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
 	 */
-	private int readHeader(InputStream in, int headerSize) throws IOException {
-		Logger.warn("HS: " + headerSize);
-		while (in.available() < headerSize) {}
+	int readHeader(InputStream in) throws IOException {
+		Logger.warn("HS: " + headerSize());
+		while (in.available() < headerSize()) {
+			in.mark(1);
+			int b = in.read();
+			if (b == -1) throw new SocketException("Connection closed");
+			in.reset();
+		}
 		Logger.warn("Header arrived");
 		readerIndex(0);
 		writerIndex(0);
-		writeBytes(in, headerSize);
+		writeBytes(in, headerSize());
 		_readID();
 
 		int dataSize = readInt();
@@ -135,21 +168,21 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
 	 */
-	private void readData(InputStream in, int dataSize) throws IOException {
+	void readData(InputStream in, int dataSize) throws IOException {
 		if (dataSize == 0) return;
 		Logger.warn("DS: " + dataSize);
 		int readBytes = 0;
 		while (readBytes < dataSize) {
 			int _readBytes = writeBytes(in, dataSize - readBytes);
 			readBytes += _readBytes;
-			System.out.println(readBytes + "/" + dataSize + " - (" + _readBytes + ")");
+//			System.out.println(readBytes + "/" + dataSize + " - (" + _readBytes + ")");
 		}
 		Logger.warn("Data arrived");
 	}
 
-	protected abstract PacketBuffer writeID(PacketBuffer idbuffer);
+	protected abstract PacketBuffer writeID(PacketBuffer idbuffer) throws IOException;
 
-	protected abstract void _readID();
+	protected abstract void _readID() throws IOException;
 
 	public static class EnumMessage<E extends Enum<E>> extends MessageBuffer<E> {
 		private final Class<E> idClazz;
@@ -161,12 +194,11 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public EnumMessage(Class<E> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
-		public int idSize() { return 4; }
+		public int headerSize() { return Integer.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
 			E id = super.id != null ? super.id : idClazz.getEnumConstants()[0];
-			System.out.println("enum: " + id);
 			idbuffer.writeEnumValue(id);
 			return idbuffer;
 		}
@@ -184,7 +216,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public BooleanMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 1; }
+		public int headerSize() { return Byte.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -205,7 +237,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public ByteMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 1; }
+		public int headerSize() { return Byte.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -226,7 +258,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public ShortMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 2; }
+		public int headerSize() { return Short.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -248,7 +280,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public IntegerMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 4; }
+		public int headerSize() { return Integer.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -269,7 +301,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public LongMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 8; }
+		public int headerSize() { return Long.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -290,7 +322,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public FloatMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 4; }
+		public int headerSize() { return Float.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -311,7 +343,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public DoubleMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 8; }
+		public int headerSize() { return Double.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -332,7 +364,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public CharacterMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 2; }
+		public int headerSize() { return Character.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -353,7 +385,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public TimeMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 8; }
+		public int headerSize() { return Long.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -374,7 +406,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public UUIDMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int idSize() { return 16; }
+		public int headerSize() { return Long.BYTES + Long.BYTES + Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -386,7 +418,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		protected void _readID() { setID(readUniqueId()); }
 	}
 
-	public static class GenericMessage<G extends Data> extends MessageBuffer<G> {
+	public static class GenericMessage<G extends Identifier> extends MessageBuffer<G> {
 
 		private final Class<G> idClazz;
 
@@ -397,7 +429,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public GenericMessage(Class<G> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
-		public int idSize() { return _getID().idSize(); }
+		public int headerSize() { return _getID().headerSize(); }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -579,18 +611,18 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 
 	/* Generic */
 	@SuppressWarnings("unchecked")
-	public static <D extends Data> MessageBuffer<D> create(D id) { return createGeneric((Class<D>) id.getClass()).setID(id); }
+	public static <D extends Identifier> MessageBuffer<D> create(D id) { return createGeneric((Class<D>) id.getClass()).setID(id); }
 
 	@SuppressWarnings("unchecked")
-	public static <D extends Data> MessageBuffer<D> create(D id, PacketBuffer origin) { return createGeneric((Class<D>) id.getClass(), origin).setID(id); }
+	public static <D extends Identifier> MessageBuffer<D> create(D id, PacketBuffer origin) { return createGeneric((Class<D>) id.getClass(), origin).setID(id); }
 
 	@SuppressWarnings("unchecked")
-	public static <D extends Data> MessageBuffer<D> create(D id, ByteBuf wrapper) { return createGeneric((Class<D>) id.getClass(), wrapper).setID(id); }
+	public static <D extends Identifier> MessageBuffer<D> create(D id, ByteBuf wrapper) { return createGeneric((Class<D>) id.getClass(), wrapper).setID(id); }
 
-	public static <D extends Data> MessageBuffer<D> createGeneric(Class<D> idClazz) { return new MessageBuffer.GenericMessage<>(idClazz); }
+	public static <D extends Identifier> MessageBuffer<D> createGeneric(Class<D> idClazz) { return new MessageBuffer.GenericMessage<>(idClazz); }
 
-	public static <D extends Data> MessageBuffer<D> createGeneric(Class<D> idClazz, PacketBuffer origin) { return new MessageBuffer.GenericMessage<>(idClazz, origin); }
+	public static <D extends Identifier> MessageBuffer<D> createGeneric(Class<D> idClazz, PacketBuffer origin) { return new MessageBuffer.GenericMessage<>(idClazz, origin); }
 
-	public static <D extends Data> MessageBuffer<D> createGeneric(Class<D> idClazz, ByteBuf wrapper) { return new MessageBuffer.GenericMessage<>(idClazz, wrapper); }
+	public static <D extends Identifier> MessageBuffer<D> createGeneric(Class<D> idClazz, ByteBuf wrapper) { return new MessageBuffer.GenericMessage<>(idClazz, wrapper); }
 
 }

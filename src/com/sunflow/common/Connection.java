@@ -194,7 +194,7 @@ public class Connection<T> {
 //		m_context.async_read(inputStream, (Message<T> msg) -> {
 //		MixedMessage<T> msg = new MixedMessage<>();
 		MessageBuffer<T> msg = messageFactory.get();
-		m_context.async_read(m_socket, msg, readBytes -> {
+		m_context.async_read(m_socket, msg, (readBytes) -> {
 			// A complete message has been read
 			Logger.help(Thread.currentThread(), "Read Message of length " + readBytes + ": " + msg);
 			addToIncomingMessageQueue(msg);

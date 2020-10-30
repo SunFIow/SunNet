@@ -47,10 +47,11 @@ public class PacketBuffer extends ByteBuf {
 	 *             if the specified stream threw an exception during I/O
 	 */
 	public int write(OutputStream out) throws IOException {
-		int writtenBytes = writerIndex();
+		int bytesToWrite = writerIndex();
+		if (bytesToWrite > 0)
 //		readBytes(out, wroteBytes);
-		getBytes(0, out, writtenBytes);
-		return writtenBytes;
+			getBytes(0, out, bytesToWrite);
+		return bytesToWrite;
 	}
 
 	/**
@@ -65,7 +66,7 @@ public class PacketBuffer extends ByteBuf {
 	 * @throws Exception
 	 *             subclasses may override this method throwing additional exceptions
 	 */
-	public int read(InputStream in) throws Exception {
+	public int read(InputStream in) throws IOException {
 		return writeBytes(in, in.available());
 	}
 

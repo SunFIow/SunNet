@@ -1,7 +1,5 @@
 package com.ªtest.net;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,7 +13,7 @@ import com.sunflow.util.Logger;
 
 import io.netty.buffer.ByteBuf;
 
-public class MixedMessage<T extends Serializable> extends PacketBuffer {
+public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 	public static class Owned<T extends Serializable> {
 
 		private Connection<T> remote;
@@ -53,68 +51,39 @@ public class MixedMessage<T extends Serializable> extends PacketBuffer {
 
 	public MixedMessage(ByteBuf wrapped) { super(wrapped); }
 
+	@Override
 	public T getID() { return id; }
 
+	@Override
 	public MixedMessage<T> setID(T id) { this.id = id; return this; }
 
-	public int headerSize() throws IOException {
-		ByteArrayOutputStream raw = new ByteArrayOutputStream();
-		ObjectOutputStream out = new ObjectOutputStream(raw);
-		out.writeObject(id);
-		out.writeInt(0);
-		out.close();
-		return raw.size();
+	@Override
+	public int headerSize() {
+		try {
+			ByteArrayOutputStream raw = new ByteArrayOutputStream();
+			ObjectOutputStream out = new ObjectOutputStream(raw);
+			out.writeObject(id);
+
+			out.writeInt(0);
+			out.close();
+			return raw.size();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return -1;
+		}
 	}
 
-	// * @return data size in bytes written out to the specified stream
 	/**
-	 * Write this message out to the specified stream
-	 * 
-	 * 
-	 * @return the size of this message in bytes written to the specified stream
+	 * @return byte size of the message data
 	 */
 	@Override
-	public int write(OutputStream out) throws IOException {
-		BufferedOutputStream bout = new BufferedOutputStream(out);
-		ObjectOutputStream oout = new ObjectOutputStream(bout);
+	int writeHeader(OutputStream out) throws IOException {
+		ObjectOutputStream oout = new ObjectOutputStream(out);
 		oout.writeObject(id);
 		int dataSize = writerIndex();
 		oout.writeInt(dataSize);
 		oout.flush();
-
-		if (dataSize > 0) {
-			getBytes(0, bout, dataSize);
-			bout.flush();
-		}
-
-		return headerSize() + dataSize;
-	}
-
-	/**
-	 * Reads in the message from the InputStream
-	 * 
-	 * @return the data size
-	 * 
-	 * @throws IOException
-	 *             if the specified stream threw an exception during I/O
-	 * @throws ClassNotFoundException
-	 *             Class of a serialized object cannot befound.
-	 * @throws ClassCastException
-	 *             Class of a serialized object is not this message's type.
-	 */
-	@Override
-	public int read(InputStream in) throws IOException, ClassNotFoundException, ClassCastException {
-		System.out.println("Read Avaiable: " + in.available());
-		BufferedInputStream bin = new BufferedInputStream(in);
-		// Read in the message header
-		int dataSize = readHeader(bin);
-
-		// Read int the message data if there
-		if (dataSize > 0) writeBytes(bin, dataSize);
-
-		Logger.debug("Read Data Successfully");
-		// Return the data size
-		return dataSize;
+		return headerSize();
 	}
 
 	/**
@@ -123,23 +92,28 @@ public class MixedMessage<T extends Serializable> extends PacketBuffer {
 	 * @return the data size
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
-	 * @throws ClassNotFoundException
-	 *             Class of a serialized object cannot befound.
-	 * @throws ClassCastException
-	 *             Class of a serialized object is not this message's type.
 	 */
+	@Override
 	@SuppressWarnings("unchecked")
-	private int readHeader(InputStream in) throws IOException, ClassNotFoundException, ClassCastException {
-		System.out.println("Read Avaiable: " + in.available());
+	int readHeader(InputStream in) throws IOException {
 		ObjectInputStream oin = new ObjectInputStream(in);
-		System.out.println("Read Avaiable: " + in.available());
-		id = (T) oin.readObject();
-		System.out.println("Read Avaiable: " + in.available());
+		try {
+			id = (T) oin.readObject();
+		} catch (ClassNotFoundException e) {
+			throw new IOException(e);
+		}
+		Logger.warn("Header arrived");
+
 		int dataSize = oin.readInt();
-		System.out.println("Read Avaiable: " + in.available());
 
 		readerIndex(0);
 		writerIndex(0);
 		return dataSize;
 	}
+
+	@Override
+	protected PacketBuffer writeID(PacketBuffer idbuffer) throws IOException { throw new UnsupportedOperationException(); }
+
+	@Override
+	protected void _readID() throws IOException { throw new UnsupportedOperationException(); }
 }

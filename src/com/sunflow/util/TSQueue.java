@@ -17,7 +17,7 @@ public class TSQueue<T> {
 //		deqQueue = new LinkedList<>();
 	}
 
-	protected void tsrunnable(Runnable r) {
+	protected synchronized void tsrunnable(Runnable r) {
 		lock.lock();
 		try {
 			r.run();
@@ -26,7 +26,7 @@ public class TSQueue<T> {
 		}
 	}
 
-	protected <S> S tssupplier(Supplier<S> s) {
+	protected synchronized <S> S tssupplier(Supplier<S> s) {
 		lock.lock();
 		try {
 			return s.get();
@@ -35,7 +35,7 @@ public class TSQueue<T> {
 		}
 	}
 
-	protected void tsconsumer(Consumer<T> c, T t) {
+	protected synchronized void tsconsumer(Consumer<T> c, T t) {
 		lock.lock();
 		try {
 			c.accept(t);
