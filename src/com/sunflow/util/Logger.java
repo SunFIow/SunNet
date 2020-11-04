@@ -32,7 +32,7 @@ public class Logger {
 
 	public static void help(Object msg) {
 		if (!Settings.logHelp) return;
-		log(System.out, "HELPF", msg);
+		log(System.out, "HELP", msg);
 	}
 
 	public static void debug(Object msg) {

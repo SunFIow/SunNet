@@ -41,7 +41,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		return "MessageBuffer<" + id + ">{" + super.toString() + "}";
 	}
 
-	private T id;
+	protected T id;
 
 	MessageBuffer() { super(); }
 
@@ -74,13 +74,13 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	public int write(OutputStream out) throws IOException {
 		OutputStream bout = new BufferedOutputStream(out);
 
-		Logger.warn("write header to outputstream");
+		Logger.debug("write header to outputstream");
 		int headerSize = writeHeader(bout);
 
-		Logger.warn("write data to outputstream");
+		Logger.debug("write data to outputstream");
 		int dataSize = writeData(bout);
 
-		Logger.info("headerSize: " + headerSize + ", dataSize: " + dataSize);
+		Logger.debug("headerSize: " + headerSize + ", dataSize: " + dataSize);
 
 //		Logger.warn("flush outputstream");
 //		bout.flush();
@@ -142,14 +142,14 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	 *             if the specified stream threw an exception during I/O
 	 */
 	int readHeader(InputStream in) throws IOException {
-		Logger.warn("HS: " + headerSize());
+		Logger.debug("HS: " + headerSize());
 		while (in.available() < headerSize()) {
 			in.mark(1);
 			int b = in.read();
 			if (b == -1) throw new SocketException("Connection closed");
 			in.reset();
 		}
-		Logger.warn("Header arrived");
+		Logger.debug("Header arrived");
 		readerIndex(0);
 		writerIndex(0);
 		writeBytes(in, headerSize());
@@ -170,14 +170,14 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	 */
 	void readData(InputStream in, int dataSize) throws IOException {
 		if (dataSize == 0) return;
-		Logger.warn("DS: " + dataSize);
+		Logger.help("DS: " + dataSize);
 		int readBytes = 0;
 		while (readBytes < dataSize) {
 			int _readBytes = writeBytes(in, dataSize - readBytes);
 			readBytes += _readBytes;
 //			System.out.println(readBytes + "/" + dataSize + " - (" + _readBytes + ")");
 		}
-		Logger.warn("Data arrived");
+		Logger.help("Data arrived");
 	}
 
 	protected abstract PacketBuffer writeID(PacketBuffer idbuffer) throws IOException;

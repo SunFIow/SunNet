@@ -10,16 +10,13 @@ import com.ªtest.net.MixedMessage;
 
 public class SimpleClient {
 
-	class CustomClient extends Client.Interface<CustomMsgTypes> {
+	class CustomClient extends Client<CustomMsgTypes> {
 /*        */ private static final int longsttowrite = 16000;
 //	   											     128000
-//		private static final int longsttowrite = 2147483647;
-
-		@Override
-//		public MessageBuffer<CustomMsgTypes> blankMessage() { return MessageBuffer.createEnum(CustomMsgTypes.class); }
-		public MessageBuffer<CustomMsgTypes> blankMessage() { return new MixedMessage<>(); }
+//			                                     2147483647
 
 		public CustomClient() { super(); }
+//		public CustomClient() { super(MixedMessage::new); }
 
 		public void PingServer() {
 //			Message<CustomMsgTypes> msg = new Message<>(CustomMsgTypes.ServerPing);

@@ -39,8 +39,6 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 		return "MixedMessage<" + id + ">{" + super.toString() + "}";
 	}
 
-	private T id;
-
 	public MixedMessage() { super(); }
 
 	public MixedMessage(T id) { this(); this.id = id; }
@@ -102,7 +100,7 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 		} catch (ClassNotFoundException e) {
 			throw new IOException(e);
 		}
-		Logger.warn("Header arrived");
+		Logger.debug("Header arrived");
 
 		int dataSize = oin.readInt();
 

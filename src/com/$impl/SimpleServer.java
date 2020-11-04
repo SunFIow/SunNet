@@ -1,8 +1,5 @@
 package com.$impl;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-
 import com.sunflow.common.Connection;
 import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
@@ -11,21 +8,18 @@ import com.ªtest.net.MixedMessage;
 
 public class SimpleServer {
 
-	class CustomServer extends Server.Interface<CustomMsgTypes> {
-
-		@Override
-//		public MessageBuffer<CustomMsgTypes> blankMessage() { return MessageBuffer.createEnum(CustomMsgTypes.class); }
-		public MessageBuffer<CustomMsgTypes> blankMessage() { return new MixedMessage<>(); }
+	class CustomServer extends Server<CustomMsgTypes> {
 
 		public CustomServer() { super(); }
+//		public CustomServer() { super(MixedMessage::new); }
 
-		public CustomServer(int port) { super(port); }
-
-		public CustomServer(String host, int port) { super(host, port); }
-
-		public CustomServer(InetAddress host, int port) { super(host, port); }
-
-		public CustomServer(InetSocketAddress endpoint) { super(endpoint); }
+//		public CustomServer(int port) { super(port); }
+//
+//		public CustomServer(String host, int port) { super(host, port); }
+//
+//		public CustomServer(InetAddress host, int port) { super(host, port); }
+//
+//		public CustomServer(InetSocketAddress endpoint) { super(endpoint); }
 
 		@Override
 		protected boolean onClientConnect(Connection<CustomMsgTypes> client, int clientID) {
@@ -93,23 +87,23 @@ public class SimpleServer {
 
 	public SimpleServer() {
 		CustomServer server = null;
+		server = new CustomServer();
 
-		server = new CustomServer(PrivateInfo.PORT);
-//		server = new CustomServer();
+		server.create(PrivateInfo.PORT);
 
-//		server = new CustomServer(PrivateInfo.localhost, PrivateInfo.PORT);
-//		server = new CustomServer(PrivateInfo.localhostIP, PrivateInfo.PORT);
+//		server.create(PrivateInfo.localhost, PrivateInfo.PORT);
+//		server.create(PrivateInfo.localhostIP, PrivateInfo.PORT);
 //
-//		server = new CustomServer(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
-//		server = new CustomServer(PrivateInfo.localPcIPv6, PrivateInfo.PORT);
+//		server.create(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
+//		server.create(PrivateInfo.localPcIPv6, PrivateInfo.PORT);
 //
-//		server = new CustomServer(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
+//		server.create(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
 //
-//		server = new CustomServer(PrivateInfo.routerIP4, PrivateInfo.PORT);
-//		server = new CustomServer(PrivateInfo.routerIP6, PrivateInfo.PORT);
+//		server.create(PrivateInfo.routerIP4, PrivateInfo.PORT);
+//		server.create(PrivateInfo.routerIP6, PrivateInfo.PORT);
 //
-//		server = new CustomServer(PrivateInfo.subdomain, PrivateInfo.PORT);
-//		server = new CustomServer(PrivateInfo.domain, PrivateInfo.PORT);
+//		server.create(PrivateInfo.subdomain, PrivateInfo.PORT);
+//		server.create(PrivateInfo.domain, PrivateInfo.PORT);
 
 		boolean started = server.start();
 
@@ -117,7 +111,11 @@ public class SimpleServer {
 			server.update();
 		}
 
+		Logger.help("SimpleServer", "Stopped");
+
 		server.close();
+
+		Logger.help("SimpleServer", "Closed");
 	}
 
 }

@@ -35,7 +35,6 @@ public class Connection<T> {
 	 * of this connection
 	 */
 //	protected TSQueue<Message<T>> m_qMessagesOut;
-//	protected TSQueue<MixedMessage<T>> m_qMessagesOut;
 	protected TSQueue<MessageBuffer<T>> m_qMessagesOut;
 
 	/**
@@ -44,7 +43,6 @@ public class Connection<T> {
 	 * as the "owner" of this connection is expected to provide a queue
 	 */
 //	protected TSQueue<Message.Owned<T>> m_qMessagesIn;
-//	protected TSQueue<MixedMessage.Owned<T>> m_qMessagesIn;
 	protected TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
 
 	private Supplier<MessageBuffer<T>> messageFactory;
@@ -88,7 +86,6 @@ public class Connection<T> {
 	 * @param qIn
 	 */
 //	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<Message.Owned<T>> qIn) {
-//	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<MixedMessage.Owned<T>> qIn) {
 	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<MessageBuffer.Owned<T>> qIn, Supplier<MessageBuffer<T>> messageFactory) {
 		this.m_context = m_context;
 		this.m_socket = socket;
@@ -136,23 +133,16 @@ public class Connection<T> {
 		m_context.async_task(m_nOwnerType + "_connection_disconnect", () -> {
 			m_socket.close();
 //			m_context.stop();
-		}, error -> {
-//			error.printStackTrace();
-			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't disconnect:", new DisconnectException("", error));
-		});
-
+		}, error -> Logger.error(m_nOwnerType + "-Connection", "(" + id + "): ", new DisconnectException("", error)));
 	}
 
-	public boolean isConnected() {
-		return !m_socket.isClosed() && m_socket.isConnected();
-	}
+	public boolean isConnected() { return !m_socket.isClosed() && m_socket.isConnected(); }
 
 	/**
 	 * @ASYNC Send a message, connections are one-to-one so no need to specifiy
 	 *        the target, for a client, the target is the server and vice versa
 	 */
 //	public void send(Message<T> msg) {
-//	public void send(MixedMessage<T> msg) {
 	public void send(MessageBuffer<T> msg) {
 		m_context.post(m_nOwnerType + "_connection_send", () -> {
 			/*
@@ -181,7 +171,7 @@ public class Connection<T> {
 			}
 		}, (error) -> {
 			// Something is wrong with this connection...
-			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't write message:", new WriteMessageException("", error));
+			Logger.error(m_nOwnerType + "-Connection", "(" + id + "): ", new WriteMessageException("", error));
 			// ... so disconnect it
 			disconnect();
 		});
@@ -191,8 +181,6 @@ public class Connection<T> {
 	 * @ASYNC Prime context ready to read a message
 	 */
 	private void readMessage() {
-//		m_context.async_read(inputStream, (Message<T> msg) -> {
-//		MixedMessage<T> msg = new MixedMessage<>();
 		MessageBuffer<T> msg = messageFactory.get();
 		m_context.async_read(m_socket, msg, (readBytes) -> {
 			// A complete message has been read
@@ -201,7 +189,7 @@ public class Connection<T> {
 			readMessage();
 		}, (error) -> {
 			// Something is wrong with this connection...
-			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't read message:" + new ReadMessageException(error));
+			Logger.error(m_nOwnerType + "-Connection", "(" + id + "): " + new ReadMessageException(error));
 			// ... so disconnect it
 			disconnect();
 		});

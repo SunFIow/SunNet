@@ -9,6 +9,7 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.Callable;
@@ -86,7 +87,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 
 	public abstract void async_connect(InetSocketAddress serverEndpoint, Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer);
 
-	public <T> void write(Socket socket, T data,
+	public <T extends Serializable> void write(Socket socket, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		write(() -> {
 			OutputStream os = socket.getOutputStream();
@@ -96,7 +97,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, data, successConsumer, errorConsumer);
 	}
 
-	public <T> void write(Callable<ObjectOutputStream> streamSupplier, T data,
+	public <T extends Serializable> void write(Callable<ObjectOutputStream> streamSupplier, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		task(side + "_context_write", () -> {
 			ObjectOutputStream out = streamSupplier.call();
@@ -117,7 +118,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, errorConsumer);
 	}
 
-	public <T> void async_write(Socket socket, T data,
+	public <T extends Serializable> void async_write(Socket socket, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		async_write(() -> {
 			OutputStream os = socket.getOutputStream();
@@ -127,7 +128,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, data, successConsumer, errorConsumer);
 	}
 
-	public <T> void async_write(Callable<ObjectOutputStream> streamSupplier, T data,
+	public <T extends Serializable> void async_write(Callable<ObjectOutputStream> streamSupplier, T data,
 			Runnable successConsumer, Consumer<Exception> errorConsumer) {
 		async_task(side + "_context_async_write", () -> {
 			ObjectOutputStream out = streamSupplier.call();
@@ -220,18 +221,22 @@ public abstract class CommonContext implements Runnable, Closeable {
 		while (running) {
 			try {
 				synchronized (this) {
-					while ((taskThread = taskThread_queue.pop_front()) == null)
+					while ((taskThread = taskThread_queue.pop_front()) == null && running)
 						wait();
-					taskThreads.tsremoveUnless(Thread::isAlive);
-					Logger.debug("CommonContext", "Start " + taskThread);
-					taskThread.start();
-					taskThreads.push_back(taskThread);
+					if (taskThread != null) {
+						taskThreads.tsremoveUnless(Thread::isAlive);
+						Logger.debug("CommonContext", "Start " + taskThread);
+						taskThread.start();
+						taskThreads.push_back(taskThread);
+					}
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
+
 		finishTasks();
+
 		Logger.debug(Thread.currentThread() + "CommonContext", "EXIT");
 	}
 
@@ -256,7 +261,13 @@ public abstract class CommonContext implements Runnable, Closeable {
 	public void stop() { close(); }
 
 	@Override
-	public void close() { Logger.debug("CommonContext", "close()"); running = false; }
+	public void close() {
+		Logger.debug("CommonContext", "close()");
+		running = false;
+		synchronized (this) {
+			notify();
+		}
+	}
 
 	public boolean isRunning() { return running; }
 

@@ -1,216 +1,167 @@
 package com.sunflow.client;
 
-import java.io.Closeable;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.function.Supplier;
 
-import com.sunflow.common.CommonContext;
 import com.sunflow.common.Connection;
+import com.sunflow.common.Interface;
 import com.sunflow.error.ConnectingException;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
 import com.ªtest.net.MessageBuffer;
+import com.ªtest.net.MixedMessage;
 
-public class Client {
+/**
+ * @param <T>
+ *            The type of messages
+ */
+public class Client<T extends Serializable> extends Interface<T> {
 
 	/**
-	 * @param <T>
-	 *            The type of messages
+	 * If the client is destroyed, always try and disconnect from server
 	 */
-	public static abstract class Interface<T extends Serializable> implements Closeable {
+	@Override
+	public void close() {
+		Logger.debug("CLIENT", "close()");
+		disconnect();
+	}
 
-		protected MessageBuffer<T> blankMessage() { return null; };
+	/**
+	 * The client has a single instance of a "connection" object,
+	 * which handles data transfer
+	 */
+	protected Connection<T> m_connection;
 
-		/**
-		 * If the client is destroyed, always try and disconnect from server
-		 */
-		@Override
-		public void close() {
-			Logger.debug("CLIENT", "close()");
-			disconnect();
-		}
+	public Client() { this(MixedMessage::new); }
 
-		/**
-		 * Main ThreadGroup of the client <br>
-		 * All Threads used by the client are in it
-		 */
-		protected ThreadGroup clientThreadGroup;
+	public Client(Supplier<MessageBuffer<T>> messageFactory) {
+		super(messageFactory);
+		this.messageFactory = messageFactory;
 
-		/**
-		 * Context handels the data transfer...
-		 */
-		protected CommonContext m_context;
+		this.m_qMessagesIn = new TSQueue<>();
+	}
 
-		/**
-		 * ...but needs a thread of its own to exectue its work commands
-		 */
-		protected Thread m_threadContext;
+	/**
+	 * Connect to server
+	 * 
+	 * @param host
+	 *            The hostname/ip-address of the server
+	 * @param port
+	 *            The port number of the server, between 0 and 65535
+	 */
 
-		/**
-		 * The client has a single instance of a "connection" object,
-		 * which handles data transfer
-		 */
-		protected Connection<T> m_connection;
+	public void connect(String host, int port) {
+		// Resolve hostname/ip-address into tangible physical address
+		InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
+		connect(serverEndpoint);
+	}
 
-		/**
-		 * This is the thread safe queue of incoming messages from the server
-		 */
-//		private TSQueue<Message.Owned<T>> m_qMessagesIn;
-//		private TSQueue<MixedMessage.Owned<T>> m_qMessagesIn;
-		private TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
+	/**
+	 * Connect to server
+	 * 
+	 * @param host
+	 *            The ip-address of the server
+	 * @param port
+	 *            The port number of the server, between 0 and 65535
+	 */
 
-		public Interface() {
-			this.m_qMessagesIn = new TSQueue<>();
-		}
+	public void connect(InetAddress host, int port) {
+		// Resolve hostname/ip-address into tangible physical address
+		InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
+		connect(serverEndpoint);
+	}
 
-		/**
-		 * Connect to server
-		 * 
-		 * @param host
-		 *            The hostname/ip-address of the server
-		 * @param port
-		 *            The port number of the server, between 0 and 65535
-		 */
+	/**
+	 * Connect to server
+	 * 
+	 * @param endpoint
+	 *            InetSocketAddress of the server, between 0 and 65535
+	 */
+	public void connect(InetSocketAddress endpoint) {
+		Logger.info("CLIENT", "Connecting...");
 
-		public void connect(String host, int port) {
-			// Resolve hostname/ip-address into tangible physical address
-			InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
-			connect(serverEndpoint);
-		}
+		threadGroup = new ThreadGroup(endpoint + "/Client-Thread-Group");
 
-		/**
-		 * Connect to server
-		 * 
-		 * @param host
-		 *            The ip-address of the server
-		 * @param port
-		 *            The port number of the server, between 0 and 65535
-		 */
+		// Create the context
+		m_context = new ClientContext(threadGroup);
 
-		public void connect(InetAddress host, int port) {
-			// Resolve hostname/ip-address into tangible physical address
-			InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
-			connect(serverEndpoint);
-		}
-
-		/**
-		 * Connect to server
-		 * 
-		 * @param endpoint
-		 *            InetSocketAddress of the server, between 0 and 65535
-		 */
-		public void connect(InetSocketAddress endpoint) {
-			Logger.info("CLIENT", "Connecting...");
-
-			clientThreadGroup = new ThreadGroup(endpoint + "/Client-Thread-Group");
-
-			// Create the context
-			m_context = new ClientContext(clientThreadGroup);
-
-			m_context.connect(endpoint, socket -> {
+		m_context.connect(endpoint, socket -> {
 //				SocketAddress clientEndpoint = socket.getLocalSocketAddress();
-				Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
-				m_connection = new Connection<>(Side.Client, m_context, socket, m_qMessagesIn, this::blankMessage);
-				m_connection.connectToServer();
-			}, error -> Logger.error("CLIENT", "couldn't connect", new ConnectingException("", error)));
+			Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
+			m_connection = new Connection<>(Side.Client, m_context, socket, m_qMessagesIn, messageFactory);
+			m_connection.connectToServer();
+//		}, error -> Logger.error("CLIENT", "couldn't connect", new ConnectingException("", error)));
+		}, error -> Logger.error("CLIENT", new ConnectingException("", error)));
 
-			// Start Context Thread
-			m_threadContext = new Thread(
-					clientThreadGroup,
-					m_context::run,
-					"ClientContext");
-			m_threadContext.start();
+		// Start Context Thread
+		m_threadContext = new Thread(
+				threadGroup,
+				m_context::run,
+				"ClientContext");
+		m_threadContext.start();
+	}
+
+	/**
+	 * Disconnect from the server
+	 */
+	@SuppressWarnings("deprecation")
+	public void disconnect() {
+		Logger.debug("CLIENT", "disconnect()");
+		// If connection exists, and it's connected then...
+		if (isConnected()) {
+			// ...disconnect from server gracefully
+			m_connection.disconnect();
 		}
 
-		/**
-		 * Disconnect from the server
-		 */
-		@SuppressWarnings("deprecation")
-		public void disconnect() {
-			Logger.debug("CLIENT", "disconnect()");
-			// If connection exists, and it's connected then...
-			if (isConnected()) {
-				// ...disconnect from server gracefully
-				m_connection.disconnect();
+		// Either way we're also done with the thread, we stop it...
+		m_context.stop();
+
+		try {
+			Logger.debug("CLIENT", "Wait 3000 ms for " + m_threadContext + " to die");
+			long start = System.currentTimeMillis();
+			// ...and wait for it to die
+			m_threadContext.join(3000);
+			if (m_threadContext.isAlive()) {
+				Logger.debug("CLIENT", m_threadContext + " is still alive after 3000 ms so we stop him now");
+				m_threadContext.stop();
+			} else {
+				long now = System.currentTimeMillis();
+				Logger.debug("CLIENT", m_threadContext + " died after: " + (now - start) + " ms");
 			}
-
-			// Either way we're also done with the thread, we stop it...
-			m_context.stop();
-
-			try {
-				Logger.debug("CLIENT", "Wait 3000 ms for " + m_threadContext + " to die");
-				long start = System.currentTimeMillis();
-				// ...and wait for it to die
-				m_threadContext.join(3000);
-				if (m_threadContext.isAlive()) {
-					Logger.debug("CLIENT", m_threadContext + " is still alive after 3000 ms so we stop him now");
-					m_threadContext.stop();
-				} else {
-					long now = System.currentTimeMillis();
-					Logger.debug("CLIENT", m_threadContext + " died after: " + (now - start) + " ms");
-				}
-			} catch (InterruptedException e) {
-				Logger.error("CLIENT", Thread.currentThread() + " got interrupted while waiting for " + m_threadContext + " to die", e);
-			}
+		} catch (InterruptedException e) {
+			Logger.error("CLIENT", Thread.currentThread() + " got interrupted while waiting for " + m_threadContext + " to die", e);
 		}
+	}
 
-		/**
-		 * Check if client is actually connected to a server
-		 */
-		public boolean isConnected() {
-			if (m_connection != null) return m_connection.isConnected();
-			else return false;
-		}
-
-		/**
-		 * Retrieve queue of messages from server
-		 */
-//		public TSQueue<Message.Owned<T>> incoming() { return m_qMessagesIn; };
-//		public TSQueue<MixedMessage.Owned<T>> incoming() { return m_qMessagesIn; };
-		public TSQueue<MessageBuffer.Owned<T>> incoming() { return m_qMessagesIn; };
+	/**
+	 * Check if client is actually connected to a server
+	 */
+	public boolean isConnected() {
+		if (m_connection != null) return m_connection.isConnected();
+		else return false;
+	}
 
 //		public void send(Message<T> msg) {
-//		public void send(MixedMessage<T> msg) {
-		public void send(MessageBuffer<T> msg) {
-			if (isConnected())
-				m_connection.send(msg);
-		}
-
-		/**
-		 * 
-		 */
-		public void update() { update(Integer.MAX_VALUE); }
-
-		/**
-		 * 
-		 * @param maxMessages
-		 *            Maximum number of messages to process
-		 */
-		public void update(int maxMessages) {
-			int messageCount = 0;
-			while (messageCount < maxMessages && !m_qMessagesIn.empty()) {
-				// Grab the front message
-//				Message.Owned<T> msg = m_qMessagesIn.pop_front();
-//				MixedMessage.Owned<T> msg = m_qMessagesIn.pop_front();
-				MessageBuffer.Owned<T> msg = m_qMessagesIn.pop_front();
-
-				// Pass to message handler
-				onMessage(msg.getMessage());
-
-				messageCount++;
-			}
-		}
-
-		/**
-		 * Called when a message arrives
-		 * 
-		 * @param msg
-		 *            The message
-		 */
-//		protected void onMessage(Message<T> msg) {}
-//		protected void onMessage(MixedMessage<T> msg) {}
-		protected void onMessage(MessageBuffer<T> msg) {}
+	public void send(MessageBuffer<T> msg) {
+		if (isConnected())
+			m_connection.send(msg);
 	}
+
+	@Override
+	protected void onMessage(MessageBuffer.Owned<T> msg) {
+		onMessage(msg.getMessage());
+	}
+
+	/**
+	 * Called when a message arrives
+	 * 
+	 * @param msg
+	 *            The message
+	 */
+//	protected void onMessage(Message<T> msg) {}
+	protected void onMessage(MessageBuffer<T> msg) {}
+
 }
