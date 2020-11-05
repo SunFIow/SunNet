@@ -1,18 +1,11 @@
 package com.sunflow.common;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InvalidObjectException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -87,54 +80,12 @@ public abstract class CommonContext implements Runnable, Closeable {
 
 	public abstract void async_connect(InetSocketAddress serverEndpoint, Consumer<Socket> socketConsumer, Consumer<IOException> errorConsumer);
 
-	public <T extends Serializable> void write(Socket socket, T data,
-			Runnable successConsumer, Consumer<Exception> errorConsumer) {
-		write(() -> {
-			OutputStream os = socket.getOutputStream();
-			BufferedOutputStream bos = new BufferedOutputStream(os);
-			ObjectOutputStream oos = new ObjectOutputStream(bos);
-			return oos;
-		}, data, successConsumer, errorConsumer);
-	}
-
-	public <T extends Serializable> void write(Callable<ObjectOutputStream> streamSupplier, T data,
-			Runnable successConsumer, Consumer<Exception> errorConsumer) {
+	public void write(Socket socket, PacketBuffer buffer,
+			Consumer<Integer> successConsumer, Consumer<Exception> errorConsumer) {
 		task(side + "_context_write", () -> {
-			ObjectOutputStream out = streamSupplier.call();
-			out.writeObject(data);
-			out.flush();
-			successConsumer.run();
-		}, errorConsumer);
-	}
-
-	public void write(Callable<ObjectOutputStream> streamSupplier, PacketBuffer data,
-			Runnable successConsumer, Consumer<Exception> errorConsumer) {
-		task(side + "_context_write", () -> {
-			ObjectOutputStream out = streamSupplier.call();
-//			out.writeObject(data);
-			data.write(out);
-			out.flush();
-			successConsumer.run();
-		}, errorConsumer);
-	}
-
-	public <T extends Serializable> void async_write(Socket socket, T data,
-			Runnable successConsumer, Consumer<Exception> errorConsumer) {
-		async_write(() -> {
-			OutputStream os = socket.getOutputStream();
-			BufferedOutputStream bos = new BufferedOutputStream(os);
-			ObjectOutputStream oos = new ObjectOutputStream(bos);
-			return oos;
-		}, data, successConsumer, errorConsumer);
-	}
-
-	public <T extends Serializable> void async_write(Callable<ObjectOutputStream> streamSupplier, T data,
-			Runnable successConsumer, Consumer<Exception> errorConsumer) {
-		async_task(side + "_context_async_write", () -> {
-			ObjectOutputStream out = streamSupplier.call();
-			out.writeObject(data);
-			out.flush();
-			successConsumer.run();
+			OutputStream out = socket.getOutputStream();
+			int wroteBytes = buffer.write(out);
+			successConsumer.accept(wroteBytes);
 		}, errorConsumer);
 	}
 
@@ -147,61 +98,12 @@ public abstract class CommonContext implements Runnable, Closeable {
 		}, errorConsumer);
 	}
 
-	public <T> void read(Socket socket,
-			Consumer<T> messageConsumer, Consumer<Exception> errorConsumer) {
-		read(() -> {
-			InputStream is = socket.getInputStream();
-			BufferedInputStream bis = new BufferedInputStream(is);
-			ObjectInputStream ois = new ObjectInputStream(bis);
-			return ois;
-		}, messageConsumer, errorConsumer);
-
-	}
-
-	public <T> void read(Callable<ObjectInputStream> streamSupplier,
-			Consumer<T> messageConsumer, Consumer<Exception> errorConsumer) {
+	public void read(Socket socket, PacketBuffer buffer,
+			Consumer<Integer> messageConsumer, Consumer<Exception> errorConsumer) {
 		task(side + "_context_read", () -> {
-			ObjectInputStream in = streamSupplier.call();
-			Object raw = in.readObject();
-			try {
-				@SuppressWarnings("unchecked")
-				T data = (T) raw;
-				messageConsumer.accept(data);
-			} catch (ClassCastException e) {
-				throw new InvalidObjectException(
-						"Read object is not the expected type / " + (raw != null
-								? raw.getClass() + " - " + raw
-								: "NULL"));
-			}
-		}, errorConsumer);
-	}
-
-	public <T> void async_read(Socket socket,
-			Consumer<T> messageConsumer, Consumer<Exception> errorConsumer) {
-		async_read(() -> {
-			InputStream is = socket.getInputStream();
-			BufferedInputStream bis = new BufferedInputStream(is);
-			ObjectInputStream ois = new ObjectInputStream(bis);
-			return ois;
-		}, messageConsumer, errorConsumer);
-
-	}
-
-	public <T> void async_read(Callable<ObjectInputStream> streamSupplier,
-			Consumer<T> messageConsumer, Consumer<Exception> errorConsumer) {
-		async_task(side + "_context_async_read", () -> {
-			ObjectInputStream in = streamSupplier.call();
-			Object raw = in.readObject();
-			try {
-				@SuppressWarnings("unchecked")
-				T data = (T) raw;
-				messageConsumer.accept(data);
-			} catch (ClassCastException e) {
-				throw new InvalidObjectException(
-						"Read object is not the expected type / " + (raw != null
-								? raw.getClass() + " - " + raw
-								: "NULL"));
-			}
+			InputStream in = socket.getInputStream();
+			int readBytes = buffer.read(in);
+			messageConsumer.accept(readBytes);
 		}, errorConsumer);
 	}
 

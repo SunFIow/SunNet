@@ -1,12 +1,6 @@
 package com.sunflow.common;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 import com.sunflow.error.DisconnectException;
@@ -15,8 +9,8 @@ import com.sunflow.error.WriteMessageException;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
-import com.sunflow.util.Utils;
 import com.ªtest.net.MessageBuffer;
+import com.ªtest.net.PacketBuffer;
 
 public class Connection<T> {
 
@@ -35,7 +29,7 @@ public class Connection<T> {
 	 * of this connection
 	 */
 //	protected TSQueue<Message<T>> m_qMessagesOut;
-	protected TSQueue<MessageBuffer<T>> m_qMessagesOut;
+	protected TSQueue<PacketBuffer> m_qMessagesOut;
 
 	/**
 	 * This queue holds all messages that have been recieved from
@@ -59,23 +53,6 @@ public class Connection<T> {
 	protected int id;
 
 	/**
-	 * The InputStream of this connection
-	 */
-	protected Callable<ObjectInputStream> inputStream;
-	/**
-	 * The OutputStream of this connection
-	 */
-	protected Callable<ObjectOutputStream> outputStream;
-
-	protected ObjectInputStream getObjectInputStream(Socket socket) throws IOException {
-		return new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
-	}
-
-	protected ObjectOutputStream getObjectOutputStream(Socket socket) throws IOException {
-		return new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-	}
-
-	/**
 	 * Specify Owner, connect to context, transfer the socket
 	 * Provide reference to incoming message queue
 	 * 
@@ -96,7 +73,10 @@ public class Connection<T> {
 		this.m_qMessagesOut = new TSQueue<>();
 		this.messageFactory = messageFactory;
 		this.id = -1;
-		this.outputStream = Utils.getCachedCallable(() -> getObjectOutputStream(socket));
+	}
+
+	public CommonContext getContext() {
+		return m_context;
 	}
 
 	/**
@@ -113,7 +93,6 @@ public class Connection<T> {
 	public void connectToClient(int uid) {
 		if (m_nOwnerType == Side.Server && isConnected()) {
 			id = uid;
-			this.inputStream = Utils.getCachedCallable(() -> getObjectInputStream(m_socket));
 			readMessage();
 		}
 	}
@@ -124,7 +103,6 @@ public class Connection<T> {
 	 */
 	public void connectToServer() {
 		if (m_nOwnerType == Side.Client && isConnected()) {
-			this.inputStream = Utils.getCachedCallable(() -> getObjectInputStream(m_socket));
 			readMessage();
 		}
 	}
@@ -143,7 +121,7 @@ public class Connection<T> {
 	 *        the target, for a client, the target is the server and vice versa
 	 */
 //	public void send(Message<T> msg) {
-	public void send(MessageBuffer<T> msg) {
+	public void send(PacketBuffer msg) {
 		m_context.post(m_nOwnerType + "_connection_send", () -> {
 			/*
 			 * If the queue has a message in it, then we must
@@ -195,25 +173,6 @@ public class Connection<T> {
 		});
 	}
 
-//	/**
-//	 * @ASYNC Prime context ready to read a message
-//	 */
-//	private void readMessage() {
-//		m_context.async_read(inputStream, (Message<T> msg) -> {
-//			// A complete message has been read
-//			Logger.debug(Thread.currentThread(), "Read Message: " + msg);
-//			addToIncomingMessageQueue(msg);
-//			readMessage();
-//		}, (error) -> {
-//			// Something is wrong with this connection...
-//			Logger.error(m_nOwnerType + "-Connection", "(" + id + ") couldn't read message:" + new ReadMessageException(error));
-//			// ... so disconnect it
-//			disconnect();
-//
-//		});
-//	}
-
-//	private void addToIncomingMessageQueue(Message<T> msg) {
 //	private void addToIncomingMessageQueue(MixedMessage<T> msg) {
 	private void addToIncomingMessageQueue(MessageBuffer<T> msg) {
 //		m_qMessagesIn.push_back(new Message.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg)); 
