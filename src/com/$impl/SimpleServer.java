@@ -52,7 +52,8 @@ public class SimpleServer {
 						Logger.info("Server", "(" + client.getID() + ") Message All");
 
 						// Send the sender's id to all other clients
-						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
+						msg = new MixedMessage<>(CustomMsgTypes.ServerMessage);
+//						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
 						msg.writeVarInt(client.getID());
 						messageAllClients(msg, client);
 						break;
