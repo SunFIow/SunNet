@@ -6,11 +6,11 @@ import java.util.function.Supplier;
 import com.sunflow.error.DisconnectException;
 import com.sunflow.error.ReadMessageException;
 import com.sunflow.error.WriteMessageException;
+import com.sunflow.message.MessageBuffer;
+import com.sunflow.message.PacketBuffer;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
-import com.ªtest.net.MessageBuffer;
-import com.ªtest.net.PacketBuffer;
 
 public class Connection<T> {
 
@@ -28,7 +28,6 @@ public class Connection<T> {
 	 * This queue holds all mesages to be sent to the remote side
 	 * of this connection
 	 */
-//	protected TSQueue<Message<T>> m_qMessagesOut;
 	protected TSQueue<PacketBuffer> m_qMessagesOut;
 
 	/**
@@ -36,7 +35,6 @@ public class Connection<T> {
 	 * the remote side of this connection. Note it is a reference
 	 * as the "owner" of this connection is expected to provide a queue
 	 */
-//	protected TSQueue<Message.Owned<T>> m_qMessagesIn;
 	protected TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
 
 	private Supplier<MessageBuffer<T>> messageFactory;
@@ -62,7 +60,6 @@ public class Connection<T> {
 	 * @param socket
 	 * @param qIn
 	 */
-//	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<Message.Owned<T>> qIn) {
 	public Connection(Side parent, CommonContext m_context, Socket socket, TSQueue<MessageBuffer.Owned<T>> qIn, Supplier<MessageBuffer<T>> messageFactory) {
 		this.m_context = m_context;
 		this.m_socket = socket;
@@ -73,10 +70,6 @@ public class Connection<T> {
 		this.m_qMessagesOut = new TSQueue<>();
 		this.messageFactory = messageFactory;
 		this.id = -1;
-	}
-
-	public CommonContext getContext() {
-		return m_context;
 	}
 
 	/**
@@ -120,7 +113,6 @@ public class Connection<T> {
 	 * @ASYNC Send a message, connections are one-to-one so no need to specifiy
 	 *        the target, for a client, the target is the server and vice versa
 	 */
-//	public void send(Message<T> msg) {
 	public void send(PacketBuffer msg) {
 		m_context.post(m_nOwnerType + "_connection_send", () -> {
 			/*
@@ -175,7 +167,6 @@ public class Connection<T> {
 
 //	private void addToIncomingMessageQueue(MixedMessage<T> msg) {
 	private void addToIncomingMessageQueue(MessageBuffer<T> msg) {
-//		m_qMessagesIn.push_back(new Message.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg)); 
 //		m_qMessagesIn.push_back(new MixedMessage.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg));
 		m_qMessagesIn.push_back(new MessageBuffer.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg));
 	}

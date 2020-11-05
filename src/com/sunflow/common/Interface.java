@@ -4,8 +4,8 @@ import java.io.Closeable;
 import java.io.Serializable;
 import java.util.function.Supplier;
 
+import com.sunflow.message.MessageBuffer;
 import com.sunflow.util.TSQueue;
-import com.ªtest.net.MessageBuffer;
 
 public abstract class Interface<T extends Serializable> implements Closeable {
 
@@ -28,9 +28,6 @@ public abstract class Interface<T extends Serializable> implements Closeable {
 	/**
 	 * Thread Safe Queue for incoming messages
 	 */
-//	private TSQueue<Message.Owned<T>> m_qMessagesIn;
-//	private TSQueue<MixedMessage.Owned<T>> m_qMessagesIn;
-//	private TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
 	protected TSQueue<MessageBuffer.Owned<T>> m_qMessagesIn;
 
 	/**
@@ -55,8 +52,6 @@ public abstract class Interface<T extends Serializable> implements Closeable {
 		int messageCount = 0;
 		while (messageCount < maxMessages && !m_qMessagesIn.empty()) {
 			// Grab the front message
-//			Message.Owned<T> msg = m_qMessagesIn.pop_front();
-//			MixedMessage.Owned<T> msg = m_qMessagesIn.pop_front();
 			MessageBuffer.Owned<T> msg = m_qMessagesIn.pop_front();
 
 			// Pass to message handler

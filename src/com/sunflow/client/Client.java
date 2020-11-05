@@ -8,11 +8,11 @@ import java.util.function.Supplier;
 import com.sunflow.common.Connection;
 import com.sunflow.common.Interface;
 import com.sunflow.error.ConnectingException;
+import com.sunflow.message.MessageBuffer;
+import com.sunflow.message.MixedMessage;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
-import com.ªtest.net.MessageBuffer;
-import com.ªtest.net.MixedMessage;
 
 /**
  * @param <T>
@@ -89,11 +89,10 @@ public class Client<T extends Serializable> extends Interface<T> {
 		m_context = new ClientContext(threadGroup);
 
 		m_context.connect(endpoint, socket -> {
-//				SocketAddress clientEndpoint = socket.getLocalSocketAddress();
+//			SocketAddress clientEndpoint = socket.getLocalSocketAddress();
 			Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
 			m_connection = new Connection<>(Side.Client, m_context, socket, m_qMessagesIn, messageFactory);
 			m_connection.connectToServer();
-//		}, error -> Logger.error("CLIENT", "couldn't connect", new ConnectingException("", error)));
 		}, error -> Logger.error("CLIENT", new ConnectingException("", error)));
 
 		// Start Context Thread
@@ -144,7 +143,6 @@ public class Client<T extends Serializable> extends Interface<T> {
 		else return false;
 	}
 
-//		public void send(Message<T> msg) {
 	public void send(MessageBuffer<T> msg) {
 		if (isConnected())
 			m_connection.send(msg);
@@ -161,7 +159,6 @@ public class Client<T extends Serializable> extends Interface<T> {
 	 * @param msg
 	 *            The message
 	 */
-//	protected void onMessage(Message<T> msg) {}
 	protected void onMessage(MessageBuffer<T> msg) {}
 
 }

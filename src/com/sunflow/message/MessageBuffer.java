@@ -1,4 +1,4 @@
-package com.ªtest.net;
+package com.sunflow.message;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -63,7 +63,9 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 	/**
 	 * @return byte size of the identifier
 	 */
-	public abstract int headerSize();
+	public abstract int idSize();
+
+	public int headerSize() { return idSize() + Integer.BYTES; }
 
 	/**
 	 * Write this message out to the specified stream
@@ -194,7 +196,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public EnumMessage(Class<E> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
-		public int headerSize() { return Integer.BYTES + Integer.BYTES; }
+		public int idSize() { return Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -216,7 +218,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public BooleanMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Byte.BYTES + Integer.BYTES; }
+		public int idSize() { return Byte.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -237,7 +239,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public ByteMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Byte.BYTES + Integer.BYTES; }
+		public int idSize() { return Byte.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -258,7 +260,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public ShortMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Short.BYTES + Integer.BYTES; }
+		public int idSize() { return Short.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -280,7 +282,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public IntegerMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Integer.BYTES + Integer.BYTES; }
+		public int idSize() { return Integer.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -301,7 +303,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public LongMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Long.BYTES + Integer.BYTES; }
+		public int idSize() { return Long.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -322,7 +324,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public FloatMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Float.BYTES + Integer.BYTES; }
+		public int idSize() { return Float.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -343,7 +345,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public DoubleMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Double.BYTES + Integer.BYTES; }
+		public int idSize() { return Double.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -364,7 +366,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public CharacterMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Character.BYTES + Integer.BYTES; }
+		public int idSize() { return Character.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -385,7 +387,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public TimeMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Long.BYTES + Integer.BYTES; }
+		public int idSize() { return Long.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -406,7 +408,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public UUIDMessage(ByteBuf wrapped) { super(wrapped); }
 
 		@Override
-		public int headerSize() { return Long.BYTES + Long.BYTES + Integer.BYTES; }
+		public int idSize() { return Long.BYTES + Long.BYTES; }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -418,7 +420,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		protected void _readID() { setID(readUniqueId()); }
 	}
 
-	public static class GenericMessage<G extends Identifier> extends MessageBuffer<G> {
+	public static class GenericMessage<G extends IIdentifier> extends MessageBuffer<G> {
 
 		private final Class<G> idClazz;
 
@@ -429,7 +431,7 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 		public GenericMessage(Class<G> idClazz, ByteBuf wrapped) { super(wrapped); this.idClazz = idClazz; }
 
 		@Override
-		public int headerSize() { return _getID().headerSize(); }
+		public int idSize() { return _getID().size(); }
 
 		@Override
 		protected PacketBuffer writeID(PacketBuffer idbuffer) {
@@ -611,18 +613,18 @@ public abstract class MessageBuffer<T> extends PacketBuffer {
 
 	/* Generic */
 	@SuppressWarnings("unchecked")
-	public static <D extends Identifier> MessageBuffer<D> create(D id) { return createGeneric((Class<D>) id.getClass()).setID(id); }
+	public static <D extends IIdentifier> MessageBuffer<D> create(D id) { return createGeneric((Class<D>) id.getClass()).setID(id); }
 
 	@SuppressWarnings("unchecked")
-	public static <D extends Identifier> MessageBuffer<D> create(D id, PacketBuffer origin) { return createGeneric((Class<D>) id.getClass(), origin).setID(id); }
+	public static <D extends IIdentifier> MessageBuffer<D> create(D id, PacketBuffer origin) { return createGeneric((Class<D>) id.getClass(), origin).setID(id); }
 
 	@SuppressWarnings("unchecked")
-	public static <D extends Identifier> MessageBuffer<D> create(D id, ByteBuf wrapper) { return createGeneric((Class<D>) id.getClass(), wrapper).setID(id); }
+	public static <D extends IIdentifier> MessageBuffer<D> create(D id, ByteBuf wrapper) { return createGeneric((Class<D>) id.getClass(), wrapper).setID(id); }
 
-	public static <D extends Identifier> MessageBuffer<D> createGeneric(Class<D> idClazz) { return new MessageBuffer.GenericMessage<>(idClazz); }
+	public static <D extends IIdentifier> MessageBuffer<D> createGeneric(Class<D> idClazz) { return new MessageBuffer.GenericMessage<>(idClazz); }
 
-	public static <D extends Identifier> MessageBuffer<D> createGeneric(Class<D> idClazz, PacketBuffer origin) { return new MessageBuffer.GenericMessage<>(idClazz, origin); }
+	public static <D extends IIdentifier> MessageBuffer<D> createGeneric(Class<D> idClazz, PacketBuffer origin) { return new MessageBuffer.GenericMessage<>(idClazz, origin); }
 
-	public static <D extends Identifier> MessageBuffer<D> createGeneric(Class<D> idClazz, ByteBuf wrapper) { return new MessageBuffer.GenericMessage<>(idClazz, wrapper); }
+	public static <D extends IIdentifier> MessageBuffer<D> createGeneric(Class<D> idClazz, ByteBuf wrapper) { return new MessageBuffer.GenericMessage<>(idClazz, wrapper); }
 
 }

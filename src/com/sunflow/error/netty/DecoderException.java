@@ -10,39 +10,39 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.ªtest.net.netty;
+package com.sunflow.error.netty;
 
 /**
- * An {@link CodecException} which is thrown by an encoder.
+ * An {@link CodecException} which is thrown by a decoder.
  */
-public class EncoderException extends CodecException {
+public class DecoderException extends CodecException {
 
-	private static final long serialVersionUID = -5086121160476476774L;
+	private static final long serialVersionUID = 6926716840699621852L;
 
 	/**
 	 * Creates a new instance.
 	 */
-	public EncoderException() {
+	public DecoderException() {
 	}
 
 	/**
 	 * Creates a new instance.
 	 */
-	public EncoderException(String message, Throwable cause) {
+	public DecoderException(String message, Throwable cause) {
 		super(message, cause);
 	}
 
 	/**
 	 * Creates a new instance.
 	 */
-	public EncoderException(String message) {
+	public DecoderException(String message) {
 		super(message);
 	}
 
 	/**
 	 * Creates a new instance.
 	 */
-	public EncoderException(Throwable cause) {
+	public DecoderException(Throwable cause) {
 		super(cause);
 	}
 }

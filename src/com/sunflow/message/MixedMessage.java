@@ -1,4 +1,4 @@
-package com.ªtest.net;
+package com.sunflow.message;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -54,6 +54,9 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 
 	@Override
 	public MixedMessage<T> setID(T id) { this.id = id; return this; }
+
+	@Override
+	public int idSize() { throw new UnsupportedOperationException(); }
 
 	@Override
 	public int headerSize() {

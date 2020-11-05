@@ -1,10 +1,10 @@
 package com.$impl;
 
 import com.sunflow.common.Connection;
+import com.sunflow.message.MessageBuffer;
+import com.sunflow.message.MixedMessage;
 import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
-import com.ªtest.net.MessageBuffer;
-import com.ªtest.net.MixedMessage;
 
 public class SimpleServer {
 
@@ -13,22 +13,11 @@ public class SimpleServer {
 		public CustomServer() { super(); }
 //		public CustomServer() { super(MixedMessage::new); }
 
-//		public CustomServer(int port) { super(port); }
-//
-//		public CustomServer(String host, int port) { super(host, port); }
-//
-//		public CustomServer(InetAddress host, int port) { super(host, port); }
-//
-//		public CustomServer(InetSocketAddress endpoint) { super(endpoint); }
-
 		@Override
 		protected boolean onClientConnect(Connection<CustomMsgTypes> client, int clientID) {
-			// Accept every connection
-			boolean accept = true;
-//			Message<CustomMsgTypes> msg = new Message<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+			boolean accept = true; // Accept every connection
 			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
 //			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-//			msg.put(clientID);
 			msg.writeVarInt(clientID);
 			client.send(msg);
 			return accept;
@@ -42,11 +31,8 @@ public class SimpleServer {
 		int i = 0;
 
 		@Override
-//		protected void onMessage(Connection<CustomMsgTypes> client, Message<CustomMsgTypes> msg) {
-//		protected void onMessage(Connection<CustomMsgTypes> client, MixedMessage<CustomMsgTypes> msg) {
 		protected void onMessage(Connection<CustomMsgTypes> client, MessageBuffer<CustomMsgTypes> msg) {
 			try {
-//				MessageBuffer<CustomMsgTypes> msg = MessageBuffer.createEnum(CustomMsgTypes.class, buffer);
 				switch (msg.getID()) {
 					case ServerPing:
 						Logger.info("Server", "(" + client.getID() + ") Server Ping");
@@ -64,10 +50,8 @@ public class SimpleServer {
 
 					case MessageAll:
 						Logger.info("Server", "(" + client.getID() + ") Message All");
-//						msg = new Message<>(CustomMsgTypes.ServerMessage);
-//						msg.put(client.getID());
 
-//						msg = new MixedMessage<>(CustomMsgTypes.ServerMessage);
+						// Send the sender's id to all other clients
 						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
 						msg.writeVarInt(client.getID());
 						messageAllClients(msg, client);

@@ -6,10 +6,6 @@ import java.util.Date;
 
 public class Logger {
 
-	public static final Logger INSTANCE = new Logger();
-
-	public static Logger instance() { return INSTANCE; }
-
 	/*
 	 * Log Methods without Marker
 	 */

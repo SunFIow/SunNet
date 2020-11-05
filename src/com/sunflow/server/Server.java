@@ -11,11 +11,11 @@ import java.util.function.Supplier;
 import com.sunflow.common.Connection;
 import com.sunflow.common.Interface;
 import com.sunflow.error.AcceptingException;
+import com.sunflow.message.MessageBuffer;
+import com.sunflow.message.MixedMessage;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
-import com.ªtest.net.MessageBuffer;
-import com.ªtest.net.MixedMessage;
 
 /**
  * Implementations of this class need to override onClientConnect,
@@ -284,7 +284,6 @@ public class Server<T extends Serializable> extends Interface<T> {
 	 * @param msg
 	 *            The message
 	 */
-//		public void messageClient(Connection<T> client, Message<T> msg) {
 	public void messageClient(Connection<T> client, MessageBuffer<T> msg) {
 		// Check client is connected...
 		if (client != null && client.isConnected())
@@ -301,7 +300,6 @@ public class Server<T extends Serializable> extends Interface<T> {
 	 * @param msg
 	 *            The message
 	 */
-//		public void messageAllClients(Message<T> msg) { messageAllClients(msg, null); }
 	public void messageAllClients(MessageBuffer<T> msg) { messageAllClients(msg, null); }
 
 	/**
@@ -312,7 +310,6 @@ public class Server<T extends Serializable> extends Interface<T> {
 	 * @param ignoreClient
 	 *            The client to ignore, null to send to everybody
 	 */
-//		public void messageAllClients(Message<T> msg, Connection<T> ignoreClient) {
 	public void messageAllClients(MessageBuffer<T> msg, Connection<T> ignoreClient) {
 		for (Connection<T> client : m_deqConnections) {
 			// Check client is connected...
@@ -370,7 +367,6 @@ public class Server<T extends Serializable> extends Interface<T> {
 	 * @param msg
 	 *            The message
 	 */
-//		protected void onMessage(Connection<T> client, Message<T> msg) {}
 	protected void onMessage(Connection<T> client, MessageBuffer<T> msg) {}
 
 }
