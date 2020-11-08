@@ -1,13 +1,11 @@
 package com.sunflow.common;
 
 import java.io.Closeable;
-import java.io.Serializable;
 import java.util.function.Supplier;
 
-import com.sunflow.message.MessageBuffer;
 import com.sunflow.util.TSQueue;
 
-public abstract class Interface<T extends Serializable> implements Closeable {
+public abstract class Interface<T> implements Closeable {
 
 	/**
 	 * Main ThreadGroup of this interface <br>

@@ -1,8 +1,7 @@
 package com.$impl;
 
 import com.sunflow.common.Connection;
-import com.sunflow.message.MessageBuffer;
-import com.sunflow.message.MixedMessage;
+import com.sunflow.common.MessageBuffer;
 import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
 
@@ -16,8 +15,8 @@ public class SimpleServer {
 		@Override
 		protected boolean onClientConnect(Connection<CustomMsgTypes> client, int clientID) {
 			boolean accept = true; // Accept every connection
-			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
 			msg.writeVarInt(clientID);
 			client.send(msg);
 			return accept;
@@ -52,8 +51,8 @@ public class SimpleServer {
 						Logger.info("Server", "(" + client.getID() + ") Message All");
 
 						// Send the sender's id to all other clients
-						msg = new MixedMessage<>(CustomMsgTypes.ServerMessage);
-//						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
+//						msg = new MixedMessage<>(CustomMsgTypes.ServerMessage);
+						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
 						msg.writeVarInt(client.getID());
 						messageAllClients(msg, client);
 						break;

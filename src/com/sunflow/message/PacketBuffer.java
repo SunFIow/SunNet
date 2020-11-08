@@ -49,9 +49,23 @@ public class PacketBuffer extends ByteBuf {
 	public int write(OutputStream out) throws IOException {
 		int bytesToWrite = writerIndex();
 		if (bytesToWrite > 0)
-//		readBytes(out, wroteBytes);
+//			readBytes(out, wroteBytes);
 			getBytes(0, out, bytesToWrite);
 		return bytesToWrite;
+	}
+
+	/**
+	 * Transfers this buffer's data to the specified stream starting at the current readerIndex.
+	 * 
+	 * @return the number of bytes written out to the specified stream
+	 * 
+	 * @throws IOException
+	 *             if the specified stream threw an exception during I/O
+	 */
+	public int writeAndModify(OutputStream out) throws IOException {
+		int writtenBytes = readableBytes();
+		readBytes(out, writtenBytes);
+		return writtenBytes;
 	}
 
 	/**
@@ -70,18 +84,8 @@ public class PacketBuffer extends ByteBuf {
 		return writeBytes(in, in.available());
 	}
 
-	/**
-	 * Transfers this buffer's data to the specified stream starting at the current readerIndex.
-	 * 
-	 * @return the number of bytes written out to the specified stream
-	 * 
-	 * @throws IOException
-	 *             if the specified stream threw an exception during I/O
-	 */
-	public int writeAndModify(OutputStream out) throws IOException {
-		int writtenBytes = readableBytes();
-		readBytes(out, writtenBytes);
-		return writtenBytes;
+	public int set(InputStream in) throws IOException {
+		return setBytes(0, in, in.available());
 	}
 
 	/**
@@ -116,10 +120,11 @@ public class PacketBuffer extends ByteBuf {
 		writeInt(value.ordinal());
 		return this;
 	}
+
 	// TODO CompoundTag
-	/**
-	 * Writes a compressed NBTTagCompound to this buffer
-	 */
+//	/**
+//	 * Writes a compressed NBTTagCompound to this buffer
+//	 */
 //	public PacketBuffer writeCompoundTag(@Nullable CompoundNBT nbt) {
 //		if (nbt == null) {
 //			this.writeByte(0);
@@ -134,9 +139,9 @@ public class PacketBuffer extends ByteBuf {
 //		return this;
 //	}
 
-	/**
-	 * Reads a compressed NBTTagCompound from this buffer
-	 */
+//	/**
+//	 * Reads a compressed NBTTagCompound from this buffer
+//	 */
 //	@Nullable
 //	public CompoundNBT readCompoundTag() {
 //		int i = this.readerIndex();
@@ -152,7 +157,8 @@ public class PacketBuffer extends ByteBuf {
 //				throw new EncoderException(ioexception);
 //			}
 //		}
-//	}
+//	}	
+
 	public PacketBuffer writeByteArray(byte[] array) {
 		this.writeVarInt(array.length);
 		this.writeBytes(array);

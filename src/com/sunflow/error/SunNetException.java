@@ -1,7 +1,9 @@
 
 package com.sunflow.error;
 
-public class SunNetException extends Exception {
+import java.io.IOException;
+
+public class SunNetException extends IOException {
 	private static final long serialVersionUID = 2913463595433725528L;
 
 	/**

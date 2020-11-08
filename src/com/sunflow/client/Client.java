@@ -1,15 +1,13 @@
 package com.sunflow.client;
 
-import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.function.Supplier;
 
 import com.sunflow.common.Connection;
 import com.sunflow.common.Interface;
+import com.sunflow.common.MessageBuffer;
 import com.sunflow.error.ConnectingException;
-import com.sunflow.message.MessageBuffer;
-import com.sunflow.message.MixedMessage;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
@@ -18,7 +16,7 @@ import com.sunflow.util.TSQueue;
  * @param <T>
  *            The type of messages
  */
-public class Client<T extends Serializable> extends Interface<T> {
+public class Client<T> extends Interface<T> {
 
 	/**
 	 * If the client is destroyed, always try and disconnect from server
@@ -35,11 +33,10 @@ public class Client<T extends Serializable> extends Interface<T> {
 	 */
 	protected Connection<T> m_connection;
 
-	public Client() { this(MixedMessage::new); }
+	public Client() { this(MessageBuffer::new); }
 
 	public Client(Supplier<MessageBuffer<T>> messageFactory) {
 		super(messageFactory);
-		this.messageFactory = messageFactory;
 
 		this.m_qMessagesIn = new TSQueue<>();
 	}

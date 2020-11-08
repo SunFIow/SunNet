@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 
 import com.sunflow.common.Connection;
+import com.sunflow.common.MessageBuffer;
 import com.sunflow.util.Logger;
 
 import io.netty.buffer.ByteBuf;
@@ -43,8 +44,6 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 
 	public MixedMessage(T id) { this(); this.id = id; }
 
-	public MixedMessage(MixedMessage<T> origin) { super(origin); }
-
 	public MixedMessage(PacketBuffer origin) { super(origin); }
 
 	public MixedMessage(ByteBuf wrapped) { super(wrapped); }
@@ -55,10 +54,6 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 	@Override
 	public MixedMessage<T> setID(T id) { this.id = id; return this; }
 
-	@Override
-	public int idSize() { throw new UnsupportedOperationException(); }
-
-	@Override
 	public int headerSize() {
 		try {
 			ByteArrayOutputStream raw = new ByteArrayOutputStream();
@@ -77,8 +72,9 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 	/**
 	 * @return byte size of the message data
 	 */
+
 	@Override
-	int writeHeader(OutputStream out) throws IOException {
+	protected int writeHeader(OutputStream out) throws IOException {
 		ObjectOutputStream oout = new ObjectOutputStream(out);
 		oout.writeObject(id);
 		int dataSize = writerIndex();
@@ -96,7 +92,7 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 	 */
 	@Override
 	@SuppressWarnings("unchecked")
-	int readHeader(InputStream in) throws IOException {
+	protected int readHeader(InputStream in) throws IOException {
 		ObjectInputStream oin = new ObjectInputStream(in);
 		try {
 			id = (T) oin.readObject();
@@ -111,10 +107,4 @@ public class MixedMessage<T extends Serializable> extends MessageBuffer<T> {
 		writerIndex(0);
 		return dataSize;
 	}
-
-	@Override
-	protected PacketBuffer writeID(PacketBuffer idbuffer) throws IOException { throw new UnsupportedOperationException(); }
-
-	@Override
-	protected void _readID() throws IOException { throw new UnsupportedOperationException(); }
 }

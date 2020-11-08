@@ -4,11 +4,13 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import com.sunflow.client.Client;
-import com.sunflow.message.MessageBuffer;
-import com.sunflow.message.MixedMessage;
+import com.sunflow.common.MessageBuffer;
 import com.sunflow.util.Logger;
 
 public class SimpleClient {
+	class TETA {
+
+	}
 
 	class CustomClient extends Client<CustomMsgTypes> {
 /*        */ private static final int longsttowrite = 16000;
@@ -19,8 +21,8 @@ public class SimpleClient {
 //		public CustomClient() { super(MixedMessage::new); }
 
 		public void PingServer() {
-			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
 
 			long timeNow = System.currentTimeMillis();
 			msg.writeVarLong(timeNow);
@@ -31,8 +33,8 @@ public class SimpleClient {
 		}
 
 		public void PingServerMULTI() {
-			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
 
 			long timeNow = System.currentTimeMillis();
 //			msg.put(timeNow);
@@ -44,8 +46,8 @@ public class SimpleClient {
 		}
 
 		public void PingServerFULL() {
-			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
 			for (int i = 0; i < longsttowrite - 1; i++) {
 				long timeNow = System.currentTimeMillis();
 //				msg.put(timeNow);
@@ -61,8 +63,8 @@ public class SimpleClient {
 		}
 
 		public void PingServerMULTIFULL() {
-			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
 			for (int i = 0; i < longsttowrite - 1; i++) {
 				long timeNow = System.currentTimeMillis();
 				msg.writeLong(timeNow);
@@ -77,8 +79,8 @@ public class SimpleClient {
 		}
 
 		public void MessageAll() {
-			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.MessageAll);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.MessageAll);
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.MessageAll);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.MessageAll);
 			send(msg);
 		}
 

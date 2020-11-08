@@ -6,7 +6,6 @@ import java.util.function.Supplier;
 import com.sunflow.error.DisconnectException;
 import com.sunflow.error.ReadMessageException;
 import com.sunflow.error.WriteMessageException;
-import com.sunflow.message.MessageBuffer;
 import com.sunflow.message.PacketBuffer;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
@@ -152,6 +151,7 @@ public class Connection<T> {
 	 */
 	private void readMessage() {
 		MessageBuffer<T> msg = messageFactory.get();
+//		MessageBuffer<T> msg = new MessageBuffer<>();
 		m_context.async_read(m_socket, msg, (readBytes) -> {
 			// A complete message has been read
 			Logger.help(Thread.currentThread(), "Read Message of length " + readBytes + ": " + msg);

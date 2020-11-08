@@ -10,9 +10,8 @@ import java.util.function.Supplier;
 
 import com.sunflow.common.Connection;
 import com.sunflow.common.Interface;
+import com.sunflow.common.MessageBuffer;
 import com.sunflow.error.AcceptingException;
-import com.sunflow.message.MessageBuffer;
-import com.sunflow.message.MixedMessage;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
@@ -42,7 +41,7 @@ public class Server<T extends Serializable> extends Interface<T> {
 	 */
 	protected int nIDCounter = 10000;
 
-	public Server() { this(MixedMessage::new); }
+	public Server() { this(MessageBuffer::new); }
 
 	public Server(Supplier<MessageBuffer<T>> messageFactory) {
 		super(messageFactory);
