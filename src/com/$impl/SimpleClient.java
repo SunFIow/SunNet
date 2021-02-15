@@ -4,133 +4,18 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import com.sunflow.client.Client;
-import com.sunflow.common.MessageBuffer;
+import com.sunflow.message.MessageBuffer;
+import com.sunflow.message.MessageBufferNEW;
 import com.sunflow.util.Logger;
 
 public class SimpleClient {
-	class TETA {
 
-	}
-
-	class CustomClient extends Client<CustomMsgTypes> {
-/*        */ private static final int longsttowrite = 16000;
-//	   											     128000
-//			                                     2147483647
-
-		public CustomClient() { super(); }
-//		public CustomClient() { super(MixedMessage::new); }
-
-		public void PingServer() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
-			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
-
-			long timeNow = System.currentTimeMillis();
-			msg.writeVarLong(timeNow);
-
-			Logger.debug("Client", "Send Ping Message to Server");
-			send(msg);
-			Logger.debug("Client", "Send Message");
-		}
-
-		public void PingServerMULTI() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
-			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
-
-			long timeNow = System.currentTimeMillis();
-//			msg.put(timeNow);
-			msg.writeVarLong(timeNow);
-
-			Logger.debug("Client", "Send Ping Message to Server");
-			for (int i = 0; i < 10; i++) send(msg);
-			Logger.debug("Client", "Send Message");
-		}
-
-		public void PingServerFULL() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
-			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
-			for (int i = 0; i < longsttowrite - 1; i++) {
-				long timeNow = System.currentTimeMillis();
-//				msg.put(timeNow);
-				msg.writeLong(timeNow);
-			}
-
-			long timeNow = System.currentTimeMillis();
-			msg.writeLong(timeNow);
-			System.out.println(timeNow);
-			Logger.debug("Client", "Send Full-Ping Message to Server");
-			send(msg);
-			Logger.debug("Client", "Send Message");
-		}
-
-		public void PingServerMULTIFULL() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
-			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
-			for (int i = 0; i < longsttowrite - 1; i++) {
-				long timeNow = System.currentTimeMillis();
-				msg.writeLong(timeNow);
-			}
-
-			long timeNow = System.currentTimeMillis();
-			msg.writeLong(timeNow);
-			System.out.println(timeNow);
-			Logger.debug("Client", "Send Multi-Full-Ping Message to Server");
-			for (int i = 0; i < 10; i++) send(msg);
-			Logger.debug("Client", "Send Message");
-		}
-
-		public void MessageAll() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.MessageAll);
-			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.MessageAll);
-			send(msg);
-		}
-
-		int i = 0;
-
-		@Override
-		protected void onMessage(MessageBuffer<CustomMsgTypes> msg) {
-			switch (msg.getID()) {
-				case ServerAccept:
-					// Server has responded to a ping request
-					int clientID0 = msg.readVarInt();
-					Logger.info("Client", "Server Accepted Connection, your UID (" + clientID0 + ")");
-					break;
-				case ServerDeny:
-					// Server has responded to a ping request
-					int clientID1 = msg.readVarInt();
-					Logger.info("Client", "Server Denied Connection, your UID (" + clientID1 + ")");
-					break;
-				case ServerPing:
-					// Server has responded to a ping request
-					long now = System.currentTimeMillis();
-					long start = msg.readVarLong();
-					Logger.info("Client", "Ping: " + (now - start) / 1000f);
-					break;
-				case ServerPingFull:
-					// Server has responded to a ping request
-					long now2 = System.currentTimeMillis();
-					for (int i = 0; i < longsttowrite - 1; i++) msg.readLong();
-					long start2 = msg.readLong();
-					Logger.info("Client", "PingFull: " + (now2 - start2) / 1000f + " - " + start2);
-					break;
-				case ServerMessage:
-					// Server has responded to a ping request
-					int clientID2 = msg.readVarInt();
-					Logger.info("Client", "Hello from (" + clientID2 + ")");
-					break;
-				default:
-					break;
-			}
-		}
-	}
-
-	public static void main(String[] args) throws Exception {
-		new SimpleClient();
-	}
+	public static void main(String[] args) throws Exception { new SimpleClient(); }
 
 	public SimpleClient() throws Exception {
 		CustomClient c = new CustomClient();
 
-		c.connect(PrivateInfo.localhost, PrivateInfo.PORT);
+//		c.connect(PrivateInfo.localhost, PrivateInfo.PORT);
 //		c.connect(PrivateInfo.localhostIP, PrivateInfo.PORT);
 
 //		c.connect(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
@@ -138,7 +23,7 @@ public class SimpleClient {
 
 //		c.connect(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
 
-//		c.connect(PrivateInfo.routerIPv4, PrivateInfo.PORT);
+		c.connect(PrivateInfo.routerIPv4, PrivateInfo.PORT);
 //		c.connect(PrivateInfo.routerIPv6, PrivateInfo.PORT);
 
 //		c.connect(PrivateInfo.subdomain, PrivateInfo.PORT);
@@ -190,6 +75,126 @@ public class SimpleClient {
 
 		Logger.info("Client", "Shutting down");
 //		System.exit(0);
+	}
+
+	class CustomClient extends Client<Object> {
+/*        */ private static final int longsttowrite = 16000;
+//	   											     128000
+//			                                     2147483647
+
+//		public CustomClient() { super(); }
+//		public CustomClient() { super(MixedMessage::new); }
+		public CustomClient() { super(MessageBufferNEW::new); }
+
+		public void PingServer() {
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
+//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
+			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPing);
+
+			long timeNow = System.currentTimeMillis();
+			msg.writeVarLong(timeNow);
+
+			Logger.debug("Client", "Send Ping Message to Server");
+			send(msg);
+			Logger.debug("Client", "Send Message");
+		}
+
+		public void PingServerMULTI() {
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
+//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
+			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPing);
+
+			long timeNow = System.currentTimeMillis();
+//			msg.put(timeNow);
+			msg.writeVarLong(timeNow);
+
+			Logger.debug("Client", "Send Ping Message to Server");
+			for (int i = 0; i < 10; i++) send(msg);
+			Logger.debug("Client", "Send Message");
+		}
+
+		public void PingServerFULL() {
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
+//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
+			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPingFull);
+
+			for (int i = 0; i < longsttowrite - 1; i++) {
+				long timeNow = System.currentTimeMillis();
+//				msg.put(timeNow);
+				msg.writeLong(timeNow);
+			}
+
+			long timeNow = System.currentTimeMillis();
+			msg.writeLong(timeNow);
+			System.out.println(timeNow);
+			Logger.debug("Client", "Send Full-Ping Message to Server");
+			send(msg);
+			Logger.debug("Client", "Send Message");
+		}
+
+		public void PingServerMULTIFULL() {
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
+//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
+			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPingFull);
+
+			for (int i = 0; i < longsttowrite - 1; i++) {
+				long timeNow = System.currentTimeMillis();
+				msg.writeLong(timeNow);
+			}
+
+			long timeNow = System.currentTimeMillis();
+			msg.writeLong(timeNow);
+			System.out.println(timeNow);
+			Logger.debug("Client", "Send Multi-Full-Ping Message to Server");
+			for (int i = 0; i < 10; i++) send(msg);
+			Logger.debug("Client", "Send Message");
+		}
+
+		public void MessageAll() {
+//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.MessageAll);
+//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.MessageAll);
+			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.MessageAll);
+
+			send(msg);
+		}
+
+		int i = 0;
+
+		@Override
+		protected void onMessage(MessageBuffer<Object> msg) {
+			switch ((CustomMsgTypes) msg.getID()) {
+				case ServerAccept:
+					// Server has responded to a ping request
+					int clientID0 = msg.readVarInt();
+					Logger.info("Client", "Server Accepted Connection, your UID (" + clientID0 + ")");
+					break;
+				case ServerDeny:
+					// Server has responded to a ping request
+					int clientID1 = msg.readVarInt();
+					Logger.info("Client", "Server Denied Connection, your UID (" + clientID1 + ")");
+					break;
+				case ServerPing:
+					// Server has responded to a ping request
+					long now = System.currentTimeMillis();
+					long start = msg.readVarLong();
+					Logger.info("Client", "Ping: " + (now - start) / 1000f);
+					break;
+				case ServerPingFull:
+					// Server has responded to a ping request
+					long now2 = System.currentTimeMillis();
+					for (int i = 0; i < longsttowrite - 1; i++) msg.readLong();
+					long start2 = msg.readLong();
+					Logger.info("Client", "PingFull: " + (now2 - start2) / 1000f + " - " + start2);
+					break;
+				case ServerMessage:
+					// Server has responded to a ping request
+					int clientID2 = msg.readVarInt();
+					Logger.info("Client", "Hello from (" + clientID2 + ")");
+					break;
+				default:
+					break;
+			}
+		}
 	}
 
 }

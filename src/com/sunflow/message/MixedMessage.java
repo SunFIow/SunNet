@@ -9,7 +9,6 @@ import java.io.OutputStream;
 import java.io.Serializable;
 
 import com.sunflow.common.Connection;
-import com.sunflow.common.MessageBuffer;
 import com.sunflow.util.Logger;
 
 import io.netty.buffer.ByteBuf;

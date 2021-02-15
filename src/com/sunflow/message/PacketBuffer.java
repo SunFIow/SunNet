@@ -81,7 +81,11 @@ public class PacketBuffer extends ByteBuf {
 	 *             subclasses may override this method throwing additional exceptions
 	 */
 	public int read(InputStream in) throws IOException {
-		return writeBytes(in, in.available());
+		return read(in, in.available());
+	}
+
+	public int read(InputStream in, int amount) throws IOException {
+		return writeBytes(in, amount);
 	}
 
 	public int set(InputStream in) throws IOException {

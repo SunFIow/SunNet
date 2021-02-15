@@ -1,7 +1,6 @@
 package com.sunflow.server;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
@@ -10,8 +9,8 @@ import java.util.function.Supplier;
 
 import com.sunflow.common.Connection;
 import com.sunflow.common.Interface;
-import com.sunflow.common.MessageBuffer;
 import com.sunflow.error.AcceptingException;
+import com.sunflow.message.MessageBuffer;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
@@ -23,7 +22,7 @@ import com.sunflow.util.TSQueue;
  * @param <T>
  *            The type of messages
  */
-public class Server<T extends Serializable> extends Interface<T> {
+public class Server<T> extends Interface<T> {
 
 	@Override
 	public void close() {
@@ -261,7 +260,7 @@ public class Server<T extends Serializable> extends Interface<T> {
 				// Connection allowed, so add to container of new connections
 				m_deqConnections.offerLast(newconn);
 
-				newconn.connectToClient(nIDCounter++);
+				newconn.connectToClient(this, nIDCounter++);
 
 				Logger.info("SERVER", "(" + newconn.getID() + ") Connection Approved");
 			} else {
@@ -367,5 +366,7 @@ public class Server<T extends Serializable> extends Interface<T> {
 	 *            The message
 	 */
 	protected void onMessage(Connection<T> client, MessageBuffer<T> msg) {}
+
+	public void onClientValidated(Connection<T> client) {}
 
 }

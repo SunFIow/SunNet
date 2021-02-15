@@ -1,38 +1,76 @@
 package com.$impl;
 
 import com.sunflow.common.Connection;
-import com.sunflow.common.MessageBuffer;
+import com.sunflow.message.MessageBuffer;
+import com.sunflow.message.MessageBufferNEW;
 import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
 
 public class SimpleServer {
 
-	class CustomServer extends Server<CustomMsgTypes> {
+	public static void main(String[] args) { new SimpleServer(); }
+
+	public SimpleServer() {
+		CustomServer server = null;
+		server = new CustomServer();
+
+		server.create(PrivateInfo.PORT);
+
+//		server.create(PrivateInfo.localhost, PrivateInfo.PORT);
+//		server.create(PrivateInfo.localhostIP, PrivateInfo.PORT);
+//
+//		server.create(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
+//		server.create(PrivateInfo.localPcIPv6, PrivateInfo.PORT);
+//
+//		server.create(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
+//
+//		server.create(PrivateInfo.routerIPv4, PrivateInfo.PORT);
+//		server.create(PrivateInfo.routerIPv6, PrivateInfo.PORT);
+//
+//		server.create(PrivateInfo.subdomain, PrivateInfo.PORT);
+//		server.create(PrivateInfo.domain, PrivateInfo.PORT);
+
+		boolean started = server.start();
+
+		if (started) while (server.isRunning()) {
+			server.update(true);
+		}
+
+		Logger.help("SimpleServer", "Stopped");
+
+		server.close();
+
+		Logger.help("SimpleServer", "Closed");
+	}
+
+	class CustomServer extends Server<Object> {
 
 		public CustomServer() { super(); }
 //		public CustomServer() { super(MixedMessage::new); }
 
 		@Override
-		protected boolean onClientConnect(Connection<CustomMsgTypes> client, int clientID) {
+		protected boolean onClientConnect(Connection<Object> client, int clientID) {
 			boolean accept = true; // Accept every connection
 //			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+			MessageBufferNEW msg = MessageBufferNEW.createT(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+
 			msg.writeVarInt(clientID);
-			client.send(msg);
+//			client.send(msg);
 			return accept;
 		}
 
 		@Override
-		protected void onClientDisconnect(Connection<CustomMsgTypes> client) {
+		protected void onClientDisconnect(Connection<Object> client) {
 			Logger.info("Server", "Removing client (" + client.getID() + ")");
 		}
 
 		int i = 0;
 
 		@Override
-		protected void onMessage(Connection<CustomMsgTypes> client, MessageBuffer<CustomMsgTypes> msg) {
+		protected void onMessage(Connection<Object> client, MessageBuffer<Object> msg) {
 			try {
-				switch (msg.getID()) {
+				switch ((CustomMsgTypes) msg.getID()) {
 					case ServerPing:
 						Logger.info("Server", "(" + client.getID() + ") Server Ping");
 
@@ -52,7 +90,8 @@ public class SimpleServer {
 
 						// Send the sender's id to all other clients
 //						msg = new MixedMessage<>(CustomMsgTypes.ServerMessage);
-						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
+//						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
+						msg = MessageBufferNEW.createT(CustomMsgTypes.ServerMessage);
 						msg.writeVarInt(client.getID());
 						messageAllClients(msg, client);
 						break;
@@ -65,41 +104,6 @@ public class SimpleServer {
 			}
 		}
 
-	}
-
-	public static void main(String[] args) { new SimpleServer(); }
-
-	public SimpleServer() {
-		CustomServer server = null;
-		server = new CustomServer();
-
-		server.create(PrivateInfo.PORT);
-
-//		server.create(PrivateInfo.localhost, PrivateInfo.PORT);
-//		server.create(PrivateInfo.localhostIP, PrivateInfo.PORT);
-//
-//		server.create(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
-//		server.create(PrivateInfo.localPcIPv6, PrivateInfo.PORT);
-//
-//		server.create(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
-//
-//		server.create(PrivateInfo.routerIP4, PrivateInfo.PORT);
-//		server.create(PrivateInfo.routerIP6, PrivateInfo.PORT);
-//
-//		server.create(PrivateInfo.subdomain, PrivateInfo.PORT);
-//		server.create(PrivateInfo.domain, PrivateInfo.PORT);
-
-		boolean started = server.start();
-
-		if (started) while (server.isRunning()) {
-			server.update();
-		}
-
-		Logger.help("SimpleServer", "Stopped");
-
-		server.close();
-
-		Logger.help("SimpleServer", "Closed");
 	}
 
 }

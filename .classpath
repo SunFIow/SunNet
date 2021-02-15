@@ -6,7 +6,7 @@
 			<accessrule kind="accessible" pattern="com/sun/istack/internal/NotNull"/>
 		</accessrules>
 	</classpathentry>
-	<classpathentry kind="src" path="src"/>
+	<classpathentry excluding="com/ªtest/" kind="src" path="src"/>
 	<classpathentry kind="lib" path="lib/netty-buffer-4.1.53.Final.jar" sourcepath="lib/netty-buffer-4.1.53.Final-sources.jar"/>
 	<classpathentry kind="lib" path="lib/netty-common-4.1.53.Final.jar" sourcepath="lib/netty-common-4.1.53.Final-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>

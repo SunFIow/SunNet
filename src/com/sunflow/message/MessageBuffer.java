@@ -1,4 +1,4 @@
-package com.sunflow.common;
+package com.sunflow.message;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -12,9 +12,9 @@ import java.util.Date;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-import com.sunflow.error.ReadMessageException;
-import com.sunflow.message.IIdentifier;
-import com.sunflow.message.PacketBuffer;
+import com.sunflow.common.Connection;
+import com.sunflow.error.UnkownClassNameException;
+import com.sunflow.error.UnkownIdentifierException;
 import com.sunflow.util.Logger;
 
 import io.netty.buffer.ByteBuf;
@@ -119,6 +119,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 	 * 
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
+	 * @throws ClassNotFoundException
 	 */
 	@Override
 	public int read(InputStream in) throws IOException {
@@ -144,11 +145,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 	 *             if the specified stream threw an exception during I/O
 	 */
 	protected int readHeader(InputStream in) throws IOException {
-		try {
-			readID(in);
-		} catch (ClassNotFoundException e) {
-			throw new ReadMessageException("", e);
-		}
+		readID(in);
 
 		int dataSize = readInt();
 		discardReadBytes();
@@ -238,7 +235,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 		}
 	}
 
-	private <E extends Enum<E>> void readID(InputStream in) throws IOException, ClassNotFoundException {
+	private <E extends Enum<E>> void readID(InputStream in) throws IOException {
 		int idSize;
 		Supplier<Object> idSup;
 		byte type = readByteSafe(in);
@@ -293,7 +290,12 @@ public class MessageBuffer<T> extends PacketBuffer {
 				String enumStr = readString(in);
 
 				@SuppressWarnings("unchecked")
-				Class<E> enumClazz = (Class<E>) Class.forName(enumStr);
+				Class<E> enumClazz;
+				try {
+					enumClazz = (Class<E>) Class.forName(enumStr);
+				} catch (ClassNotFoundException e) {
+					throw new UnkownClassNameException(e);
+				}
 				idSup = () -> readEnumValue(enumClazz);
 				break;
 			case T_GEN:
@@ -302,7 +304,12 @@ public class MessageBuffer<T> extends PacketBuffer {
 
 				System.out.println("NAME: " + genStr);
 				@SuppressWarnings("unchecked")
-				Class<IIdentifier> genClazz = (Class<IIdentifier>) Class.forName(genStr);
+				Class<IIdentifier> genClazz;
+				try {
+					genClazz = (Class<IIdentifier>) Class.forName(genStr);
+				} catch (ClassNotFoundException e) {
+					throw new UnkownClassNameException(e);
+				}
 				idSup = () -> {
 					IIdentifier id = _getID(genClazz);
 					id.read(this);
@@ -310,8 +317,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 				};
 				break;
 			default:
-				System.out.print(type);
-				throw new IllegalStateException();
+				throw new UnkownIdentifierException("" + type);
 		}
 		int headerSize = idSize + Integer.BYTES;
 		addData(in, headerSize);
@@ -381,6 +387,19 @@ public class MessageBuffer<T> extends PacketBuffer {
 		message.read(in);
 		return message;
 	}
+
+	/* Enum */
+	public static <E> MessageBuffer<E> createE(E id) { MessageBuffer<E> m = createE(); m.setID(id); return m; }
+
+	public static <E> MessageBuffer<E> createE(E id, PacketBuffer origin) { MessageBuffer<E> m = createE(origin); m.setID(id); return m; }
+
+	public static <E> MessageBuffer<E> createE(E id, ByteBuf wrapper) { MessageBuffer<E> m = createE(wrapper); m.setID(id); return m; }
+
+	public static <E> MessageBuffer<E> createE() { return new MessageBuffer<>(); }
+
+	public static <E> MessageBuffer<E> createE(PacketBuffer origin) { return new MessageBuffer<>(origin); }
+
+	public static <E> MessageBuffer<E> createE(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Enum */
 	public static <E extends Enum<E>> MessageBuffer<E> create(E id) { MessageBuffer<E> m = createEnum(); m.setID(id); return m; }

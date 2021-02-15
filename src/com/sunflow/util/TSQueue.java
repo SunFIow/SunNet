@@ -10,6 +10,8 @@ public class TSQueue<T> {
 	protected ReentrantLock lock = new ReentrantLock();
 	protected Deque<T> deqQueue;
 
+	protected ReentrantLock muxBlocking = new ReentrantLock();
+
 	public TSQueue() {
 		lock = new ReentrantLock();
 		deqQueue = new ArrayDeque<>();
@@ -50,15 +52,7 @@ public class TSQueue<T> {
 	 *
 	 * @return the head of this deque, or {@code null} if this deque is empty
 	 */
-	public T front() {
-//		lock.lock();
-//		try {
-//			return deqQueue.peekFirst();
-//		} finally {
-//			lock.unlock();
-//		}
-		return tssupplier(deqQueue::peekFirst);
-	}
+	public T front() { return tssupplier(deqQueue::peekFirst); }
 
 	/**
 	 * Retrieves, but does not remove, the last element of this deque,
@@ -66,15 +60,7 @@ public class TSQueue<T> {
 	 *
 	 * @return the tail of this deque, or {@code null} if this deque is empty
 	 */
-	public T back() {
-//		lock.lock();
-//		try {
-//			return deqQueue.peekLast();
-//		} finally {
-//			lock.unlock();
-//		}
-		return tssupplier(deqQueue::peekLast);
-	}
+	public T back() { return tssupplier(deqQueue::peekLast); }
 
 	/**
 	 * Inserts the specified element at the front of this deque unless it would
@@ -96,15 +82,7 @@ public class TSQueue<T> {
 	 *             if some property of the specified
 	 *             element prevents it from being added to this deque
 	 */
-	public void push_front(T item) {
-//		lock.lock();
-//		try {
-//			deqQueue.offerFirst(item);
-//		} finally {
-//			lock.unlock();
-//		}
-		tsconsumer(deqQueue::offerFirst, item);
-	}
+	public void push_front(T item) { tsconsumer(deqQueue::offerFirst, item); wake(); }
 
 	/**
 	 * Inserts the specified element at the end of this deque unless it would
@@ -127,45 +105,21 @@ public class TSQueue<T> {
 	 *             element prevents it from being added to this deque
 	 */
 
-	public void push_back(T item) {
-//		lock.lock();
-//		try {
-//			deqQueue.offerLast(item);
-//		} finally {
-//			lock.unlock();
-//		}
-		tsconsumer(deqQueue::offerLast, item);
-	}
+	public void push_back(T item) { tsconsumer(deqQueue::offerLast, item); wake(); }
 
 	/**
 	 * Returns <tt>true</tt> if this collection contains no elements.
 	 *
 	 * @return <tt>true</tt> if this collection contains no elements
 	 */
-	public boolean empty() {
-//		lock.lock();
-//		try {
-//			return deqQueue.isEmpty();
-//		} finally {
-//			lock.unlock();
-//		}
-		return tssupplier(deqQueue::isEmpty);
-	}
+	public boolean empty() { return tssupplier(deqQueue::isEmpty); }
 
 	/**
 	 * Returns the number of elements in this deque.
 	 *
 	 * @return the number of elements in this deque
 	 */
-	public int count() {
-//		lock.lock();
-//		try {
-//			return deqQueue.size();
-//		} finally {
-//			lock.unlock();
-//		}
-		return tssupplier(deqQueue::size);
-	}
+	public int count() { return tssupplier(deqQueue::size); }
 
 	/**
 	 * Removes all of the elements from this collection (optional operation).
@@ -175,15 +129,7 @@ public class TSQueue<T> {
 	 *             if the <tt>clear</tt> operation
 	 *             is not supported by this collection
 	 */
-	public void clear() {
-//		lock.lock();
-//		try {
-//			deqQueue.clear();
-//		} finally {
-//			lock.unlock();
-//		}
-		tsrunnable(deqQueue::clear);
-	}
+	public void clear() { tsrunnable(deqQueue::clear); }
 
 	/**
 	 * Retrieves and removes the first element of this deque,
@@ -191,15 +137,7 @@ public class TSQueue<T> {
 	 *
 	 * @return the head of this deque, or {@code null} if this deque is empty
 	 */
-	public T pop_front() {
-//		lock.lock();
-//		try {
-//			return deqQueue.pollFirst();
-//		} finally {
-//			lock.unlock();
-//		}
-		return tssupplier(deqQueue::pollFirst);
-	}
+	public T pop_front() { return tssupplier(deqQueue::pollFirst); }
 
 	/**
 	 * Retrieves and removes the last element of this deque,
@@ -207,14 +145,21 @@ public class TSQueue<T> {
 	 *
 	 * @return the tail of this deque, or {@code null} if this deque is empty
 	 */
-	public T pop_back() {
-//		lock.lock();
-//		try {
-//			return deqQueue.pollLast();
-//		} finally {
-//			lock.unlock();
-//		}
-		return tssupplier(deqQueue::pollLast);
+	public T pop_back() { return tssupplier(deqQueue::pollLast); }
+
+	public void wake() {
+		synchronized (this) {
+			notify();
+		}
 	}
 
+	public void sleep() {
+		synchronized (this) {
+			while (empty()) try {
+				wait();
+			} catch (InterruptedException e) {
+				Logger.error("TSQueue_sleep", "TSQueue got interrupted while waiting!", e);
+			}
+		}
+	}
 }

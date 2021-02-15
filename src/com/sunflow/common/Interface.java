@@ -3,6 +3,7 @@ package com.sunflow.common;
 import java.io.Closeable;
 import java.util.function.Supplier;
 
+import com.sunflow.message.MessageBuffer;
 import com.sunflow.util.TSQueue;
 
 public abstract class Interface<T> implements Closeable {
@@ -41,12 +42,22 @@ public abstract class Interface<T> implements Closeable {
 
 	public void update() { update(Integer.MAX_VALUE); }
 
+	public void update(boolean bWait) { update(Integer.MAX_VALUE, bWait); }
+
+	public void update(int maxMessages) { update(maxMessages, false); }
+
 	/**
 	 * 
 	 * @param maxMessages
 	 *            Maximum number of messages to process
+	 * @param bWait
+	 *            (sleep) until a message arrived
+	 * @throws InterruptedException
 	 */
-	public void update(int maxMessages) {
+	public void update(int maxMessages, boolean bWait) {
+		// We don't need the server to accupy 100% of a CPU core
+		if (bWait) m_qMessagesIn.sleep();
+
 		int messageCount = 0;
 		while (messageCount < maxMessages && !m_qMessagesIn.empty()) {
 			// Grab the front message

@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -113,6 +114,16 @@ public abstract class CommonContext implements Runnable, Closeable {
 			InputStream in = socket.getInputStream();
 			int readBytes = buffer.read(in);
 			messageConsumer.accept(readBytes);
+		}, errorConsumer);
+	}
+
+	public void async_read(Socket socket, int size,
+			BiConsumer<PacketBuffer, Integer> messageConsumer, Consumer<Exception> errorConsumer) {
+		async_task(side + "_context_async_read", () -> {
+			InputStream in = socket.getInputStream();
+			PacketBuffer buffer = new PacketBuffer();
+			int readBytes = buffer.read(in, size);
+			messageConsumer.accept(buffer, readBytes);
 		}, errorConsumer);
 	}
 

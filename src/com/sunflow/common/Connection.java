@@ -5,8 +5,11 @@ import java.util.function.Supplier;
 
 import com.sunflow.error.DisconnectException;
 import com.sunflow.error.ReadMessageException;
+import com.sunflow.error.ValidationException;
 import com.sunflow.error.WriteMessageException;
+import com.sunflow.message.MessageBuffer;
 import com.sunflow.message.PacketBuffer;
+import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
@@ -47,7 +50,11 @@ public class Connection<T> {
 	/**
 	 * The id of this connection
 	 */
-	protected int id;
+	protected int id = -1;
+
+	private long m_nHandshakeOut = 0;
+	private long m_nHandshakeIn = 0;
+	private long m_nHandshakeCheck = 0;
 
 	/**
 	 * Specify Owner, connect to context, transfer the socket
@@ -68,7 +75,19 @@ public class Connection<T> {
 
 		this.m_qMessagesOut = new TSQueue<>();
 		this.messageFactory = messageFactory;
-		this.id = -1;
+
+		// Construct validation check data
+		if (m_nOwnerType == Side.Server) {
+			// Connection is Server -> Client, construct random data for the client
+			// to transform and send back for validation
+			m_nHandshakeOut = System.currentTimeMillis();
+
+			// Pre-calculate the result for checking when the client responds
+			m_nHandshakeCheck = scramble(m_nHandshakeOut);
+		} else {
+			// Connection is Client -> Server, so we have nothing to define
+
+		}
 	}
 
 	/**
@@ -82,10 +101,19 @@ public class Connection<T> {
 	 * @param uid
 	 *            the unique id for this connection
 	 */
-	public void connectToClient(int uid) {
+	public void connectToClient(Server<T> server, int uid) {
 		if (m_nOwnerType == Side.Server && isConnected()) {
 			id = uid;
-			readMessage();
+//			Was: readMessage();
+
+			// A client has attempted to connect to the server, but we wish
+			// the client to first validate itself, so first write out the
+			// handshake data to be validated
+			writeValidation();
+
+			// Next, issue a task to sit and wait asynchronously for precisely
+			// the validation data sent back from the client
+			readValidation(server);
 		}
 	}
 
@@ -95,7 +123,11 @@ public class Connection<T> {
 	 */
 	public void connectToServer() {
 		if (m_nOwnerType == Side.Client && isConnected()) {
-			readMessage();
+//			Was: readMessage();
+
+			// First thing server will do is send packet to be validated
+			// so wait for that and respond
+			readValidation();
 		}
 	}
 
@@ -165,9 +197,65 @@ public class Connection<T> {
 		});
 	}
 
-//	private void addToIncomingMessageQueue(MixedMessage<T> msg) {
 	private void addToIncomingMessageQueue(MessageBuffer<T> msg) {
-//		m_qMessagesIn.push_back(new MixedMessage.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg));
 		m_qMessagesIn.push_back(new MessageBuffer.Owned<T>(m_nOwnerType == Side.Server ? this : null, msg));
+	}
+
+	// "Encrypt" data (8 bytes)
+	private long scramble(long nInput) {
+		long out = nInput ^ 0xDEADBEEFC0DECAFEL;
+		out = (out & 0xF0F0F0F0F0F0F0F0L) >> 4 | (out & 0x0F0F0F0F0F0F0F0FL) << 4;
+		return out ^ 0xC0DEFACE12345678L;
+	}
+
+	// ASYNC - Used by both client and server to write validation packet
+	private void writeValidation() {
+		PacketBuffer val_msg = new PacketBuffer();
+		val_msg.writeLong(m_nHandshakeOut);
+		m_context.async_write(m_socket, val_msg, (wroteBytes) -> {
+			// Validation data sent, clients should sit and wait
+			// for a response (or a closure)
+			if (m_nOwnerType == Side.Client) readMessage();
+		}, (error) -> {
+			// Something went wrong while validating...
+			Logger.error(m_nOwnerType + "-Connection", "(" + id + "): " + new ValidationException(error));
+			// ... so disconnect it
+			disconnect();
+		});
+	}
+
+	private void readValidation() { readValidation(null); }
+
+	// ASYNC - Used by both client and server to read validation packet
+	private void readValidation(Server<T> server) {
+		m_context.async_read(m_socket, Long.BYTES + 20, (val_msg, readBytes) -> {
+			m_nHandshakeIn = val_msg.readLong();
+			if (m_nOwnerType == Side.Server) {
+				if (m_nHandshakeIn == m_nHandshakeCheck) {
+					// Client has provided valid solution, so allow it to connect properly
+					Logger.help("Client Validated");
+					server.onClientValidated(this);
+
+					// Sit waiting to receive data now
+					readMessage();
+				} else {
+					// Client gave incorrect data, so disconnect
+					Logger.help("Client Disconnected (Fail Validation)");
+					// ... so disconnect it
+					disconnect();
+				}
+			} else {
+				// Connection is a client, so solve puzzle
+				m_nHandshakeOut = scramble(m_nHandshakeIn);
+
+				// Write the result
+				writeValidation();
+			}
+		}, (error) -> {
+			// Something went wrong while validating...
+			Logger.error(m_nOwnerType + "-Connection", "(" + id + "): " + new ValidationException(error));
+			// ... so disconnect it
+			disconnect();
+		});
 	}
 }

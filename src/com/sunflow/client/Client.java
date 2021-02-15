@@ -6,8 +6,8 @@ import java.util.function.Supplier;
 
 import com.sunflow.common.Connection;
 import com.sunflow.common.Interface;
-import com.sunflow.common.MessageBuffer;
 import com.sunflow.error.ConnectingException;
+import com.sunflow.message.MessageBuffer;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
