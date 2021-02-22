@@ -298,7 +298,7 @@ public class Server<T> extends Interface<T> {
 	 * @param msg
 	 *            The message
 	 */
-	public void messageAllClients(MessageBuffer<T> msg) { messageAllClients(msg, null); }
+	public void messageAllClients(MessageBuffer<T> msg) { messageAllClients(msg, (Connection<T>) null); }
 
 	/**
 	 * Send a message to all clients except the ignored one
@@ -314,6 +314,30 @@ public class Server<T> extends Interface<T> {
 			if (client != null && client.isConnected()) {
 				// Check that it's not the client we want to ignore
 				if (client != ignoreClient)
+					client.send(msg);
+			} else {
+				// The client couldn't be contacted, so assume it has disconnected.
+				clientNotConnected(client);
+			}
+		}
+	}
+
+	/**
+	 * Send a message to all clients except the ignored ones
+	 * 
+	 * @param msg
+	 *            The message
+	 * @param ignoreClient
+	 *            The client to ignore, null to send to everybody
+	 */
+	public void messageAllClients(MessageBuffer<T> msg, Connection<T>... ignoreClients) {
+		for (Connection<T> client : m_deqConnections) {
+			// Check client is connected...
+			if (client != null && client.isConnected()) {
+				// Check that it's not the client we want to ignore
+				boolean ignore = false;
+				for (Connection<T> ignoreClient : ignoreClients) if (client == ignoreClient) ignore = true;
+				if (!ignore)
 					client.send(msg);
 			} else {
 				// The client couldn't be contacted, so assume it has disconnected.

@@ -106,14 +106,17 @@ public class Connection<T> {
 			id = uid;
 //			Was: readMessage();
 
-			// A client has attempted to connect to the server, but we wish
-			// the client to first validate itself, so first write out the
-			// handshake data to be validated
-			writeValidation();
+//			// A client has attempted to connect to the server, but we wish
+//			// the client to first validate itself, so first write out the
+//			// handshake data to be validated
+//			writeValidation();
+//
+//			// Next, issue a task to sit and wait asynchronously for precisely
+//			// the validation data sent back from the client
+//			readValidation(server);
 
-			// Next, issue a task to sit and wait asynchronously for precisely
-			// the validation data sent back from the client
-			readValidation(server);
+			server.onClientValidated(this);
+			readMessage();
 		}
 	}
 
@@ -127,7 +130,8 @@ public class Connection<T> {
 
 			// First thing server will do is send packet to be validated
 			// so wait for that and respond
-			readValidation();
+//			readValidation();
+			readMessage();
 		}
 	}
 
@@ -164,7 +168,7 @@ public class Connection<T> {
 	 */
 	private void writeMessage() {
 		m_context.async_write(m_socket, m_qMessagesOut.front(), (wroteBytes) -> {
-			Logger.help(Thread.currentThread(), "Wrote Message of length " + wroteBytes + ": " + m_qMessagesOut.front());
+			Logger.net(Thread.currentThread(), "Wrote Message of length " + wroteBytes + ": " + m_qMessagesOut.front());
 			// A complete message has been written
 			m_qMessagesOut.pop_front();
 			if (!m_qMessagesOut.empty()) {
@@ -186,7 +190,7 @@ public class Connection<T> {
 //		MessageBuffer<T> msg = new MessageBuffer<>();
 		m_context.async_read(m_socket, msg, (readBytes) -> {
 			// A complete message has been read
-			Logger.help(Thread.currentThread(), "Read Message of length " + readBytes + ": " + msg);
+			Logger.net(Thread.currentThread(), "Read Message of length " + readBytes + ": " + msg);
 			addToIncomingMessageQueue(msg);
 			readMessage();
 		}, (error) -> {

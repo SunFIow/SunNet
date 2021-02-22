@@ -5,7 +5,6 @@ import java.io.InputStreamReader;
 
 import com.sunflow.client.Client;
 import com.sunflow.message.MessageBuffer;
-import com.sunflow.message.MessageBufferNEW;
 import com.sunflow.util.Logger;
 
 public class SimpleClient {
@@ -16,14 +15,14 @@ public class SimpleClient {
 		CustomClient c = new CustomClient();
 
 //		c.connect(PrivateInfo.localhost, PrivateInfo.PORT);
-//		c.connect(PrivateInfo.localhostIP, PrivateInfo.PORT);
+		c.connect(PrivateInfo.localhostIP, PrivateInfo.PORT);
 
 //		c.connect(PrivateInfo.localPcIPv4, PrivateInfo.PORT);
 //		c.connect(PrivateInfo.localPcIPv6, PrivateInfo.PORT);
 
 //		c.connect(PrivateInfo.yourPcIPv6, PrivateInfo.PORT);
 
-		c.connect(PrivateInfo.routerIPv4, PrivateInfo.PORT);
+//		c.connect(PrivateInfo.routerIPv4, PrivateInfo.PORT);
 //		c.connect(PrivateInfo.routerIPv6, PrivateInfo.PORT);
 
 //		c.connect(PrivateInfo.subdomain, PrivateInfo.PORT);
@@ -77,19 +76,16 @@ public class SimpleClient {
 //		System.exit(0);
 	}
 
-	class CustomClient extends Client<Object> {
-/*        */ private static final int longsttowrite = 16000;
+	class CustomClient extends Client<CustomMsgTypes> {
+/*        */ private static final int longsttowrite = 128000;
+//													  16000
 //	   											     128000
 //			                                     2147483647
 
-//		public CustomClient() { super(); }
-//		public CustomClient() { super(MixedMessage::new); }
-		public CustomClient() { super(MessageBufferNEW::new); }
+		public CustomClient() { super(); }
 
 		public void PingServer() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
-			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPing);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
 
 			long timeNow = System.currentTimeMillis();
 			msg.writeVarLong(timeNow);
@@ -100,9 +96,7 @@ public class SimpleClient {
 		}
 
 		public void PingServerMULTI() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPing);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
-			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPing);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPing);
 
 			long timeNow = System.currentTimeMillis();
 //			msg.put(timeNow);
@@ -114,9 +108,7 @@ public class SimpleClient {
 		}
 
 		public void PingServerFULL() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
-			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPingFull);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
 
 			for (int i = 0; i < longsttowrite - 1; i++) {
 				long timeNow = System.currentTimeMillis();
@@ -133,9 +125,7 @@ public class SimpleClient {
 		}
 
 		public void PingServerMULTIFULL() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.ServerPingFull);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
-			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.ServerPingFull);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.ServerPingFull);
 
 			for (int i = 0; i < longsttowrite - 1; i++) {
 				long timeNow = System.currentTimeMillis();
@@ -151,9 +141,7 @@ public class SimpleClient {
 		}
 
 		public void MessageAll() {
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(CustomMsgTypes.MessageAll);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.MessageAll);
-			MessageBufferNEW msg = MessageBufferNEW.createT(CustomMsgTypes.MessageAll);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(CustomMsgTypes.MessageAll);
 
 			send(msg);
 		}
@@ -161,8 +149,8 @@ public class SimpleClient {
 		int i = 0;
 
 		@Override
-		protected void onMessage(MessageBuffer<Object> msg) {
-			switch ((CustomMsgTypes) msg.getID()) {
+		protected void onMessage(MessageBuffer<CustomMsgTypes> msg) {
+			switch (msg.getID()) {
 				case ServerAccept:
 					// Server has responded to a ping request
 					int clientID0 = msg.readVarInt();

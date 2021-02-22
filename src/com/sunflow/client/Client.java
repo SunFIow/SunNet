@@ -2,12 +2,14 @@ package com.sunflow.client;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import com.sunflow.common.Connection;
 import com.sunflow.common.Interface;
 import com.sunflow.error.ConnectingException;
 import com.sunflow.message.MessageBuffer;
+import com.sunflow.message.PacketBuffer;
 import com.sunflow.util.Logger;
 import com.sunflow.util.Side;
 import com.sunflow.util.TSQueue;
@@ -50,10 +52,10 @@ public class Client<T> extends Interface<T> {
 	 *            The port number of the server, between 0 and 65535
 	 */
 
-	public void connect(String host, int port) {
+	public boolean connect(String host, int port) {
 		// Resolve hostname/ip-address into tangible physical address
 		InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
-		connect(serverEndpoint);
+		return connect(serverEndpoint);
 	}
 
 	/**
@@ -65,10 +67,10 @@ public class Client<T> extends Interface<T> {
 	 *            The port number of the server, between 0 and 65535
 	 */
 
-	public void connect(InetAddress host, int port) {
+	public boolean connect(InetAddress host, int port) {
 		// Resolve hostname/ip-address into tangible physical address
 		InetSocketAddress serverEndpoint = new InetSocketAddress(host, port);
-		connect(serverEndpoint);
+		return connect(serverEndpoint);
 	}
 
 	/**
@@ -77,7 +79,7 @@ public class Client<T> extends Interface<T> {
 	 * @param endpoint
 	 *            InetSocketAddress of the server, between 0 and 65535
 	 */
-	public void connect(InetSocketAddress endpoint) {
+	public boolean connect(InetSocketAddress endpoint) {
 		Logger.info("CLIENT", "Connecting...");
 
 		threadGroup = new ThreadGroup(endpoint + "/Client-Thread-Group");
@@ -85,7 +87,9 @@ public class Client<T> extends Interface<T> {
 		// Create the context
 		m_context = new ClientContext(threadGroup);
 
+		AtomicBoolean connectionSucess = new AtomicBoolean();
 		m_context.connect(endpoint, socket -> {
+			connectionSucess.set(true);
 //			SocketAddress clientEndpoint = socket.getLocalSocketAddress();
 			Logger.info("CLIENT", "Succesfully conntected to (" + endpoint + ")");
 			m_connection = new Connection<>(Side.Client, m_context, socket, m_qMessagesIn, messageFactory);
@@ -98,13 +102,15 @@ public class Client<T> extends Interface<T> {
 				m_context::run,
 				"ClientContext");
 		m_threadContext.start();
+
+		return connectionSucess.get();
 	}
 
 	/**
 	 * Disconnect from the server
 	 */
 	@SuppressWarnings("deprecation")
-	public void disconnect() {
+	public boolean disconnect() {
 		Logger.debug("CLIENT", "disconnect()");
 		// If connection exists, and it's connected then...
 		if (isConnected()) {
@@ -127,8 +133,10 @@ public class Client<T> extends Interface<T> {
 				long now = System.currentTimeMillis();
 				Logger.debug("CLIENT", m_threadContext + " died after: " + (now - start) + " ms");
 			}
+			return true;
 		} catch (InterruptedException e) {
 			Logger.error("CLIENT", Thread.currentThread() + " got interrupted while waiting for " + m_threadContext + " to die", e);
+			return false;
 		}
 	}
 
@@ -140,7 +148,7 @@ public class Client<T> extends Interface<T> {
 		else return false;
 	}
 
-	public void send(MessageBuffer<T> msg) {
+	public void send(PacketBuffer msg) {
 		if (isConnected())
 			m_connection.send(msg);
 	}

@@ -11,22 +11,22 @@ public class Logger {
 	 */
 
 	public static void fatal(Object msg) {
-		if (!Settings.logFatals) return;
+		if (!Settings.logFatal) return;
 		log(System.err, "FATAL", msg);
 	}
 
 	public static void error(Object msg) {
-		if (!Settings.logErrors) return;
+		if (!Settings.logError) return;
 		log(System.err, "ERROR", msg);
 	}
 
 	public static void warn(Object msg) {
-		if (!Settings.logWarnings) return;
+		if (!Settings.logWarning) return;
 		log(System.out, "WARNING", msg);
 	}
 
 	public static void info(Object msg) {
-		if (!Settings.logInfos) return;
+		if (!Settings.logInfo) return;
 		log(System.out, "INFO", msg);
 	}
 
@@ -36,8 +36,13 @@ public class Logger {
 	}
 
 	public static void debug(Object msg) {
-		if (!Settings.logDebugs) return;
+		if (!Settings.logDebug) return;
 		log(System.out, "DEBUG", msg);
+	}
+
+	public static void net(Object msg) {
+		if (!Settings.logNet) return;
+		log(System.out, "NET", msg);
 	}
 
 	/*
@@ -45,22 +50,22 @@ public class Logger {
 	 */
 
 	public static void fatal(Object marker, Object msg) {
-		if (!Settings.logFatals) return;
+		if (!Settings.logFatal) return;
 		log(System.err, "FATAL", marker, msg);
 	}
 
 	public static void error(Object marker, Object msg) {
-		if (!Settings.logErrors) return;
+		if (!Settings.logError) return;
 		log(System.err, "ERROR", marker, msg);
 	}
 
 	public static void warn(Object marker, Object msg) {
-		if (!Settings.logWarnings) return;
+		if (!Settings.logWarning) return;
 		log(System.out, "WARNING", marker, msg);
 	}
 
 	public static void info(Object marker, Object msg) {
-		if (!Settings.logInfos) return;
+		if (!Settings.logInfo) return;
 		log(System.out, "INFO", marker, msg);
 	}
 
@@ -70,22 +75,26 @@ public class Logger {
 	}
 
 	public static void debug(Object marker, Object msg) {
-		if (!Settings.logDebugs) return;
+		if (!Settings.logDebug) return;
 		log(System.out, "DEBUG", marker, msg);
 	}
 
+	public static void net(Object marker, Object msg) {
+		if (!Settings.logNet) return;
+		log(System.out, "NET", marker, msg);
+	}
 	/*
 	 * Log Methods without Marker But with Throwable
 	 */
 
 	public static void fatal(Object msg, Throwable error) {
-		if (!Settings.logFatals) return;
+		if (!Settings.logFatal) return;
 		log(System.err, "FATAL", msg);
 		error.printStackTrace();
 	}
 
 	public static void error(Object msg, Throwable error) {
-		if (!Settings.logErrors) return;
+		if (!Settings.logError) return;
 		log(System.err, "ERROR", msg);
 		error.printStackTrace();
 	}
@@ -95,13 +104,13 @@ public class Logger {
 	 */
 
 	public static void fatal(Object marker, Object msg, Throwable error) {
-		if (!Settings.logFatals) return;
+		if (!Settings.logFatal) return;
 		log(System.err, "FATAL", marker, msg);
 		error.printStackTrace();
 	}
 
 	public static void error(Object marker, Object msg, Throwable error) {
-		if (!Settings.logErrors) return;
+		if (!Settings.logError) return;
 		log(System.err, "ERROR", marker, msg);
 		error.printStackTrace();
 	}

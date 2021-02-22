@@ -2,7 +2,6 @@ package com.$impl;
 
 import com.sunflow.common.Connection;
 import com.sunflow.message.MessageBuffer;
-import com.sunflow.message.MessageBufferNEW;
 import com.sunflow.server.Server;
 import com.sunflow.util.Logger;
 
@@ -43,34 +42,31 @@ public class SimpleServer {
 		Logger.help("SimpleServer", "Closed");
 	}
 
-	class CustomServer extends Server<Object> {
+	class CustomServer extends Server<CustomMsgTypes> {
 
 		public CustomServer() { super(); }
-//		public CustomServer() { super(MixedMessage::new); }
 
 		@Override
-		protected boolean onClientConnect(Connection<Object> client, int clientID) {
+		protected boolean onClientConnect(Connection<CustomMsgTypes> client, int clientID) {
 			boolean accept = true; // Accept every connection
-//			MixedMessage<CustomMsgTypes> msg = new MixedMessage<>(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-//			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
-			MessageBufferNEW msg = MessageBufferNEW.createT(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
+			MessageBuffer<CustomMsgTypes> msg = MessageBuffer.create(accept ? CustomMsgTypes.ServerAccept : CustomMsgTypes.ServerDeny);
 
 			msg.writeVarInt(clientID);
-//			client.send(msg);
+			client.send(msg);
 			return accept;
 		}
 
 		@Override
-		protected void onClientDisconnect(Connection<Object> client) {
+		protected void onClientDisconnect(Connection<CustomMsgTypes> client) {
 			Logger.info("Server", "Removing client (" + client.getID() + ")");
 		}
 
 		int i = 0;
 
 		@Override
-		protected void onMessage(Connection<Object> client, MessageBuffer<Object> msg) {
+		protected void onMessage(Connection<CustomMsgTypes> client, MessageBuffer<CustomMsgTypes> msg) {
 			try {
-				switch ((CustomMsgTypes) msg.getID()) {
+				switch (msg.getID()) {
 					case ServerPing:
 						Logger.info("Server", "(" + client.getID() + ") Server Ping");
 
@@ -89,9 +85,7 @@ public class SimpleServer {
 						Logger.info("Server", "(" + client.getID() + ") Message All");
 
 						// Send the sender's id to all other clients
-//						msg = new MixedMessage<>(CustomMsgTypes.ServerMessage);
-//						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
-						msg = MessageBufferNEW.createT(CustomMsgTypes.ServerMessage);
+						msg = MessageBuffer.create(CustomMsgTypes.ServerMessage);
 						msg.writeVarInt(client.getID());
 						messageAllClients(msg, client);
 						break;

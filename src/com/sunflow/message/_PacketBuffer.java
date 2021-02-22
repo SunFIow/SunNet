@@ -22,19 +22,19 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 
-public class PacketBuffer extends ByteBuf {
+public class _PacketBuffer extends ByteBuf {
 
 	private final ByteBuf buf;
 
-	public PacketBuffer() {
+	public _PacketBuffer() {
 		this(Unpooled.buffer());
 	}
 
-	public PacketBuffer(PacketBuffer origin) {
+	public _PacketBuffer(PacketBuffer origin) {
 		this(origin.duplicate());
 	}
 
-	public PacketBuffer(ByteBuf wrapped) {
+	public _PacketBuffer(ByteBuf wrapped) {
 		this.buf = wrapped;
 	}
 
@@ -106,7 +106,7 @@ public class PacketBuffer extends ByteBuf {
 		return 5;
 	}
 
-	public PacketBuffer writeUniqueId(UUID uuid) {
+	public _PacketBuffer writeUniqueId(UUID uuid) {
 		this.writeLong(uuid.getMostSignificantBits());
 		this.writeLong(uuid.getLeastSignificantBits());
 		return this;
@@ -120,7 +120,7 @@ public class PacketBuffer extends ByteBuf {
 		return (enumClass.getEnumConstants())[readInt()];
 	}
 
-	public PacketBuffer writeEnumValue(Enum<?> value) {
+	public _PacketBuffer writeEnumValue(Enum<?> value) {
 		writeInt(value.ordinal());
 		return this;
 	}
@@ -163,7 +163,7 @@ public class PacketBuffer extends ByteBuf {
 //		}
 //	}	
 
-	public PacketBuffer writeByteArray(byte[] array) {
+	public _PacketBuffer writeByteArray(byte[] array) {
 		this.writeVarInt(array.length);
 		this.writeBytes(array);
 		return this;
@@ -187,7 +187,7 @@ public class PacketBuffer extends ByteBuf {
 	/**
 	 * Writes an array of VarInts to the buffer, prefixed by the length of the array (as a VarInt).
 	 */
-	public PacketBuffer writeVarIntArray(int[] array) {
+	public _PacketBuffer writeVarIntArray(int[] array) {
 		this.writeVarInt(array.length);
 
 		for (int i : array) {
@@ -219,7 +219,7 @@ public class PacketBuffer extends ByteBuf {
 	/**
 	 * Writes an array of longs to the buffer, prefixed by the length of the array (as a VarInt).
 	 */
-	public PacketBuffer writeLongArray(long[] array) {
+	public _PacketBuffer writeLongArray(long[] array) {
 		this.writeVarInt(array.length);
 
 		for (long i : array) {
@@ -303,7 +303,7 @@ public class PacketBuffer extends ByteBuf {
 	 * the next byte is part of that same int. Micro-optimization for int values that are expected to have values below
 	 * 128.
 	 */
-	public PacketBuffer writeVarInt(int input) {
+	public _PacketBuffer writeVarInt(int input) {
 		while ((input & -128) != 0) {
 			this.writeByte(input & 127 | 128);
 			input >>>= 7;
@@ -313,7 +313,7 @@ public class PacketBuffer extends ByteBuf {
 		return this;
 	}
 
-	public PacketBuffer writeVarLong(long value) {
+	public _PacketBuffer writeVarLong(long value) {
 		while ((value & -128L) != 0L) {
 			this.writeByte((int) (value & 127L) | 128);
 			value >>>= 7;
@@ -334,7 +334,7 @@ public class PacketBuffer extends ByteBuf {
 	 * string length exceeds this value!
 	 */
 	public String readString(int maxLength) {
-		int i = this.readVarInt();
+		int i = this.readInt();
 		if (i > maxLength * 4) {
 			throw new DecoderException("The received encoded string buffer length is longer than maximum allowed (" + i + " > " + maxLength * 4 + ")");
 		} else if (i < 0) {
@@ -350,7 +350,7 @@ public class PacketBuffer extends ByteBuf {
 		}
 	}
 
-	public PacketBuffer writeString(String string) {
+	public _PacketBuffer writeString(String string) {
 		writeString(string, 32767);
 		return this;
 	}
@@ -360,7 +360,7 @@ public class PacketBuffer extends ByteBuf {
 		if (abyte.length > maxLength) {
 			throw new EncoderException("String too big (was " + abyte.length + " bytes encoded, max " + maxLength + ")");
 		} else {
-			this.writeVarInt(abyte.length);
+			this.writeInt(abyte.length);
 			this.writeBytes(abyte);
 			return abyte.length;
 		}
@@ -370,7 +370,7 @@ public class PacketBuffer extends ByteBuf {
 		return new Date(this.readLong());
 	}
 
-	public PacketBuffer writeTime(Date time) {
+	public _PacketBuffer writeTime(Date time) {
 		this.writeLong(time.getTime());
 		return this;
 	}
@@ -381,9 +381,8 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer capacity(int p_capacity_1_) {
-		this.buf.capacity(p_capacity_1_);
-		return this;
+	public ByteBuf capacity(int p_capacity_1_) {
+		return this.buf.capacity(p_capacity_1_);
 	}
 
 	@Override
@@ -407,7 +406,7 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public ByteBuf unwrap() { // TODO
+	public ByteBuf unwrap() {
 		return this.buf.unwrap();
 	}
 
@@ -432,9 +431,8 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer readerIndex(int p_readerIndex_1_) {
-		this.buf.readerIndex(p_readerIndex_1_);
-		return this;
+	public ByteBuf readerIndex(int p_readerIndex_1_) {
+		return this.buf.readerIndex(p_readerIndex_1_);
 	}
 
 	@Override
@@ -443,15 +441,13 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer writerIndex(int p_writerIndex_1_) {
-		this.buf.writerIndex(p_writerIndex_1_);
-		return this;
+	public ByteBuf writerIndex(int p_writerIndex_1_) {
+		return this.buf.writerIndex(p_writerIndex_1_);
 	}
 
 	@Override
-	public PacketBuffer setIndex(int p_setIndex_1_, int p_setIndex_2_) {
-		this.buf.setIndex(p_setIndex_1_, p_setIndex_2_);
-		return this;
+	public ByteBuf setIndex(int p_setIndex_1_, int p_setIndex_2_) {
+		return this.buf.setIndex(p_setIndex_1_, p_setIndex_2_);
 	}
 
 	@Override
@@ -490,51 +486,43 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer clear() {
-		this.buf.clear();
-		return this;
+	public ByteBuf clear() {
+		return this.buf.clear();
 	}
 
 	@Override
-	public PacketBuffer markReaderIndex() {
-		this.buf.markReaderIndex();
-		return this;
+	public ByteBuf markReaderIndex() {
+		return this.buf.markReaderIndex();
 	}
 
 	@Override
-	public PacketBuffer resetReaderIndex() {
-		this.buf.resetReaderIndex();
-		return this;
+	public ByteBuf resetReaderIndex() {
+		return this.buf.resetReaderIndex();
 	}
 
 	@Override
-	public PacketBuffer markWriterIndex() {
-		this.buf.markWriterIndex();
-		return this;
+	public ByteBuf markWriterIndex() {
+		return this.buf.markWriterIndex();
 	}
 
 	@Override
-	public PacketBuffer resetWriterIndex() {
-		this.buf.resetWriterIndex();
-		return this;
+	public ByteBuf resetWriterIndex() {
+		return this.buf.resetWriterIndex();
 	}
 
 	@Override
-	public PacketBuffer discardReadBytes() {
-		this.buf.discardReadBytes();
-		return this;
+	public ByteBuf discardReadBytes() {
+		return this.buf.discardReadBytes();
 	}
 
 	@Override
-	public PacketBuffer discardSomeReadBytes() {
-		this.buf.discardSomeReadBytes();
-		return this;
+	public ByteBuf discardSomeReadBytes() {
+		return this.buf.discardSomeReadBytes();
 	}
 
 	@Override
-	public PacketBuffer ensureWritable(int p_ensureWritable_1_) {
-		this.buf.ensureWritable(p_ensureWritable_1_);
-		return this;
+	public ByteBuf ensureWritable(int p_ensureWritable_1_) {
+		return this.buf.ensureWritable(p_ensureWritable_1_);
 	}
 
 	@Override
@@ -643,45 +631,38 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer getBytes(int p_getBytes_1_, ByteBuf p_getBytes_2_) {
-		this.buf.getBytes(p_getBytes_1_, p_getBytes_2_);
-		return this;
+	public ByteBuf getBytes(int p_getBytes_1_, ByteBuf p_getBytes_2_) {
+		return this.buf.getBytes(p_getBytes_1_, p_getBytes_2_);
 	}
 
 	@Override
-	public PacketBuffer getBytes(int p_getBytes_1_, ByteBuf p_getBytes_2_, int p_getBytes_3_) {
-		this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_);
-		return this;
+	public ByteBuf getBytes(int p_getBytes_1_, ByteBuf p_getBytes_2_, int p_getBytes_3_) {
+		return this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_);
 	}
 
 	@Override
-	public PacketBuffer getBytes(int p_getBytes_1_, ByteBuf p_getBytes_2_, int p_getBytes_3_, int p_getBytes_4_) {
-		this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_, p_getBytes_4_);
-		return this;
+	public ByteBuf getBytes(int p_getBytes_1_, ByteBuf p_getBytes_2_, int p_getBytes_3_, int p_getBytes_4_) {
+		return this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_, p_getBytes_4_);
 	}
 
 	@Override
-	public PacketBuffer getBytes(int p_getBytes_1_, byte[] p_getBytes_2_) {
-		this.buf.getBytes(p_getBytes_1_, p_getBytes_2_);
-		return this;
+	public ByteBuf getBytes(int p_getBytes_1_, byte[] p_getBytes_2_) {
+		return this.buf.getBytes(p_getBytes_1_, p_getBytes_2_);
 	}
 
 	@Override
-	public PacketBuffer getBytes(int p_getBytes_1_, byte[] p_getBytes_2_, int p_getBytes_3_, int p_getBytes_4_) {
-		this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_, p_getBytes_4_);
-		return this;
+	public ByteBuf getBytes(int p_getBytes_1_, byte[] p_getBytes_2_, int p_getBytes_3_, int p_getBytes_4_) {
+		return this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_, p_getBytes_4_);
 	}
 
 	@Override
-	public PacketBuffer getBytes(int p_getBytes_1_, ByteBuffer p_getBytes_2_) {
-		this.buf.getBytes(p_getBytes_1_, p_getBytes_2_);
-		return this;
+	public ByteBuf getBytes(int p_getBytes_1_, ByteBuffer p_getBytes_2_) {
+		return this.buf.getBytes(p_getBytes_1_, p_getBytes_2_);
 	}
 
 	@Override
-	public PacketBuffer getBytes(int p_getBytes_1_, OutputStream p_getBytes_2_, int p_getBytes_3_) throws IOException {
-		this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_);
-		return this;
+	public ByteBuf getBytes(int p_getBytes_1_, OutputStream p_getBytes_2_, int p_getBytes_3_) throws IOException {
+		return this.buf.getBytes(p_getBytes_1_, p_getBytes_2_, p_getBytes_3_);
 	}
 
 	@Override
@@ -700,117 +681,98 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer setBoolean(int p_setBoolean_1_, boolean p_setBoolean_2_) {
-		this.buf.setBoolean(p_setBoolean_1_, p_setBoolean_2_);
-		return this;
+	public ByteBuf setBoolean(int p_setBoolean_1_, boolean p_setBoolean_2_) {
+		return this.buf.setBoolean(p_setBoolean_1_, p_setBoolean_2_);
 	}
 
 	@Override
-	public PacketBuffer setByte(int p_setByte_1_, int p_setByte_2_) {
-		this.buf.setByte(p_setByte_1_, p_setByte_2_);
-		return this;
+	public ByteBuf setByte(int p_setByte_1_, int p_setByte_2_) {
+		return this.buf.setByte(p_setByte_1_, p_setByte_2_);
 	}
 
 	@Override
-	public PacketBuffer setShort(int p_setShort_1_, int p_setShort_2_) {
-		this.buf.setShort(p_setShort_1_, p_setShort_2_);
-		return this;
+	public ByteBuf setShort(int p_setShort_1_, int p_setShort_2_) {
+		return this.buf.setShort(p_setShort_1_, p_setShort_2_);
 	}
 
 	@Override
 	public ByteBuf setShortLE(int p_setShortLE_1_, int p_setShortLE_2_) {
-		this.buf.setShortLE(p_setShortLE_1_, p_setShortLE_2_);
-		return this;
+		return this.buf.setShortLE(p_setShortLE_1_, p_setShortLE_2_);
 	}
 
 	@Override
-	public PacketBuffer setMedium(int p_setMedium_1_, int p_setMedium_2_) {
-		this.buf.setMedium(p_setMedium_1_, p_setMedium_2_);
-		return this;
+	public ByteBuf setMedium(int p_setMedium_1_, int p_setMedium_2_) {
+		return this.buf.setMedium(p_setMedium_1_, p_setMedium_2_);
 	}
 
 	@Override
-	public PacketBuffer setMediumLE(int p_setMediumLE_1_, int p_setMediumLE_2_) {
-		this.buf.setMediumLE(p_setMediumLE_1_, p_setMediumLE_2_);
-		return this;
+	public ByteBuf setMediumLE(int p_setMediumLE_1_, int p_setMediumLE_2_) {
+		return this.buf.setMediumLE(p_setMediumLE_1_, p_setMediumLE_2_);
 	}
 
 	@Override
-	public PacketBuffer setInt(int p_setInt_1_, int p_setInt_2_) {
-		this.buf.setInt(p_setInt_1_, p_setInt_2_);
-		return this;
+	public ByteBuf setInt(int p_setInt_1_, int p_setInt_2_) {
+		return this.buf.setInt(p_setInt_1_, p_setInt_2_);
 	}
 
 	@Override
-	public PacketBuffer setIntLE(int p_setIntLE_1_, int p_setIntLE_2_) {
-		this.buf.setIntLE(p_setIntLE_1_, p_setIntLE_2_);
-		return this;
+	public ByteBuf setIntLE(int p_setIntLE_1_, int p_setIntLE_2_) {
+		return this.buf.setIntLE(p_setIntLE_1_, p_setIntLE_2_);
 	}
 
 	@Override
-	public PacketBuffer setLong(int p_setLong_1_, long p_setLong_2_) {
-		this.buf.setLong(p_setLong_1_, p_setLong_2_);
-		return this;
+	public ByteBuf setLong(int p_setLong_1_, long p_setLong_2_) {
+		return this.buf.setLong(p_setLong_1_, p_setLong_2_);
 	}
 
 	@Override
-	public PacketBuffer setLongLE(int p_setLongLE_1_, long p_setLongLE_2_) {
-		this.buf.setLongLE(p_setLongLE_1_, p_setLongLE_2_);
-		return this;
+	public ByteBuf setLongLE(int p_setLongLE_1_, long p_setLongLE_2_) {
+		return this.buf.setLongLE(p_setLongLE_1_, p_setLongLE_2_);
 	}
 
 	@Override
-	public PacketBuffer setChar(int p_setChar_1_, int p_setChar_2_) {
-		this.buf.setChar(p_setChar_1_, p_setChar_2_);
-		return this;
+	public ByteBuf setChar(int p_setChar_1_, int p_setChar_2_) {
+		return this.buf.setChar(p_setChar_1_, p_setChar_2_);
 	}
 
 	@Override
-	public PacketBuffer setFloat(int p_setFloat_1_, float p_setFloat_2_) {
-		this.buf.setFloat(p_setFloat_1_, p_setFloat_2_);
-		return this;
+	public ByteBuf setFloat(int p_setFloat_1_, float p_setFloat_2_) {
+		return this.buf.setFloat(p_setFloat_1_, p_setFloat_2_);
 	}
 
 	@Override
-	public PacketBuffer setDouble(int p_setDouble_1_, double p_setDouble_2_) {
-		this.buf.setDouble(p_setDouble_1_, p_setDouble_2_);
-		return this;
+	public ByteBuf setDouble(int p_setDouble_1_, double p_setDouble_2_) {
+		return this.buf.setDouble(p_setDouble_1_, p_setDouble_2_);
 	}
 
 	@Override
-	public PacketBuffer setBytes(int p_setBytes_1_, ByteBuf p_setBytes_2_) {
-		this.buf.setBytes(p_setBytes_1_, p_setBytes_2_);
-		return this;
+	public ByteBuf setBytes(int p_setBytes_1_, ByteBuf p_setBytes_2_) {
+		return this.buf.setBytes(p_setBytes_1_, p_setBytes_2_);
 	}
 
 	@Override
-	public PacketBuffer setBytes(int p_setBytes_1_, ByteBuf p_setBytes_2_, int p_setBytes_3_) {
-		this.buf.setBytes(p_setBytes_1_, p_setBytes_2_, p_setBytes_3_);
-		return this;
+	public ByteBuf setBytes(int p_setBytes_1_, ByteBuf p_setBytes_2_, int p_setBytes_3_) {
+		return this.buf.setBytes(p_setBytes_1_, p_setBytes_2_, p_setBytes_3_);
 	}
 
 	@Override
-	public PacketBuffer setBytes(int p_setBytes_1_, ByteBuf p_setBytes_2_, int p_setBytes_3_, int p_setBytes_4_) {
-		this.buf.setBytes(p_setBytes_1_, p_setBytes_2_, p_setBytes_3_, p_setBytes_4_);
-		return this;
+	public ByteBuf setBytes(int p_setBytes_1_, ByteBuf p_setBytes_2_, int p_setBytes_3_, int p_setBytes_4_) {
+		return this.buf.setBytes(p_setBytes_1_, p_setBytes_2_, p_setBytes_3_, p_setBytes_4_);
 	}
 
 	@Override
-	public PacketBuffer setBytes(int p_setBytes_1_, byte[] p_setBytes_2_) {
-		this.buf.setBytes(p_setBytes_1_, p_setBytes_2_);
-		return this;
+	public ByteBuf setBytes(int p_setBytes_1_, byte[] p_setBytes_2_) {
+		return this.buf.setBytes(p_setBytes_1_, p_setBytes_2_);
 	}
 
 	@Override
-	public PacketBuffer setBytes(int p_setBytes_1_, byte[] p_setBytes_2_, int p_setBytes_3_, int p_setBytes_4_) {
-		this.buf.setBytes(p_setBytes_1_, p_setBytes_2_, p_setBytes_3_, p_setBytes_4_);
-		return this;
+	public ByteBuf setBytes(int p_setBytes_1_, byte[] p_setBytes_2_, int p_setBytes_3_, int p_setBytes_4_) {
+		return this.buf.setBytes(p_setBytes_1_, p_setBytes_2_, p_setBytes_3_, p_setBytes_4_);
 	}
 
 	@Override
-	public PacketBuffer setBytes(int p_setBytes_1_, ByteBuffer p_setBytes_2_) {
-		this.buf.setBytes(p_setBytes_1_, p_setBytes_2_);
-		return this;
+	public ByteBuf setBytes(int p_setBytes_1_, ByteBuffer p_setBytes_2_) {
+		return this.buf.setBytes(p_setBytes_1_, p_setBytes_2_);
 	}
 
 	@Override
@@ -829,9 +791,8 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer setZero(int p_setZero_1_, int p_setZero_2_) {
-		this.buf.setZero(p_setZero_1_, p_setZero_2_);
-		return this;
+	public ByteBuf setZero(int p_setZero_1_, int p_setZero_2_) {
+		return this.buf.setZero(p_setZero_1_, p_setZero_2_);
 	}
 
 	@Override
@@ -955,45 +916,38 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer readBytes(ByteBuf p_readBytes_1_) {
-		this.buf.readBytes(p_readBytes_1_);
-		return this;
+	public ByteBuf readBytes(ByteBuf p_readBytes_1_) {
+		return this.buf.readBytes(p_readBytes_1_);
 	}
 
 	@Override
-	public PacketBuffer readBytes(ByteBuf p_readBytes_1_, int p_readBytes_2_) {
-		this.buf.readBytes(p_readBytes_1_, p_readBytes_2_);
-		return this;
+	public ByteBuf readBytes(ByteBuf p_readBytes_1_, int p_readBytes_2_) {
+		return this.buf.readBytes(p_readBytes_1_, p_readBytes_2_);
 	}
 
 	@Override
-	public PacketBuffer readBytes(ByteBuf p_readBytes_1_, int p_readBytes_2_, int p_readBytes_3_) {
-		this.buf.readBytes(p_readBytes_1_, p_readBytes_2_, p_readBytes_3_);
-		return this;
+	public ByteBuf readBytes(ByteBuf p_readBytes_1_, int p_readBytes_2_, int p_readBytes_3_) {
+		return this.buf.readBytes(p_readBytes_1_, p_readBytes_2_, p_readBytes_3_);
 	}
 
 	@Override
-	public PacketBuffer readBytes(byte[] p_readBytes_1_) {
-		this.buf.readBytes(p_readBytes_1_);
-		return this;
+	public ByteBuf readBytes(byte[] p_readBytes_1_) {
+		return this.buf.readBytes(p_readBytes_1_);
 	}
 
 	@Override
-	public PacketBuffer readBytes(byte[] p_readBytes_1_, int p_readBytes_2_, int p_readBytes_3_) {
-		this.buf.readBytes(p_readBytes_1_, p_readBytes_2_, p_readBytes_3_);
-		return this;
+	public ByteBuf readBytes(byte[] p_readBytes_1_, int p_readBytes_2_, int p_readBytes_3_) {
+		return this.buf.readBytes(p_readBytes_1_, p_readBytes_2_, p_readBytes_3_);
 	}
 
 	@Override
-	public PacketBuffer readBytes(ByteBuffer p_readBytes_1_) {
-		this.buf.readBytes(p_readBytes_1_);
-		return this;
+	public ByteBuf readBytes(ByteBuffer p_readBytes_1_) {
+		return this.buf.readBytes(p_readBytes_1_);
 	}
 
 	@Override
-	public PacketBuffer readBytes(OutputStream p_readBytes_1_, int p_readBytes_2_) throws IOException {
-		this.buf.readBytes(p_readBytes_1_, p_readBytes_2_);
-		return this;
+	public ByteBuf readBytes(OutputStream p_readBytes_1_, int p_readBytes_2_) throws IOException {
+		return this.buf.readBytes(p_readBytes_1_, p_readBytes_2_);
 	}
 
 	@Override
@@ -1012,123 +966,103 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer skipBytes(int p_skipBytes_1_) {
-		this.buf.skipBytes(p_skipBytes_1_);
-		return this;
+	public ByteBuf skipBytes(int p_skipBytes_1_) {
+		return this.buf.skipBytes(p_skipBytes_1_);
 	}
 
 	@Override
-	public PacketBuffer writeBoolean(boolean p_writeBoolean_1_) {
-		this.buf.writeBoolean(p_writeBoolean_1_);
-		return this;
+	public ByteBuf writeBoolean(boolean p_writeBoolean_1_) {
+		return this.buf.writeBoolean(p_writeBoolean_1_);
 	}
 
 	@Override
-	public PacketBuffer writeByte(int p_writeByte_1_) {
-		this.buf.writeByte(p_writeByte_1_);
-		return this;
+	public ByteBuf writeByte(int p_writeByte_1_) {
+		return this.buf.writeByte(p_writeByte_1_);
 	}
 
 	@Override
-	public PacketBuffer writeShort(int p_writeShort_1_) {
-		this.buf.writeShort(p_writeShort_1_);
-		return this;
+	public ByteBuf writeShort(int p_writeShort_1_) {
+		return this.buf.writeShort(p_writeShort_1_);
 	}
 
 	@Override
-	public PacketBuffer writeShortLE(int p_writeShortLE_1_) {
-		this.buf.writeShortLE(p_writeShortLE_1_);
-		return this;
+	public ByteBuf writeShortLE(int p_writeShortLE_1_) {
+		return this.buf.writeShortLE(p_writeShortLE_1_);
 	}
 
 	@Override
-	public PacketBuffer writeMedium(int p_writeMedium_1_) {
-		this.buf.writeMedium(p_writeMedium_1_);
-		return this;
+	public ByteBuf writeMedium(int p_writeMedium_1_) {
+		return this.buf.writeMedium(p_writeMedium_1_);
 	}
 
 	@Override
-	public PacketBuffer writeMediumLE(int p_writeMediumLE_1_) {
-		this.buf.writeMediumLE(p_writeMediumLE_1_);
-		return this;
+	public ByteBuf writeMediumLE(int p_writeMediumLE_1_) {
+		return this.buf.writeMediumLE(p_writeMediumLE_1_);
 	}
 
 	@Override
-	public PacketBuffer writeInt(int p_writeInt_1_) {
-		this.buf.writeInt(p_writeInt_1_);
-		return this;
+	public ByteBuf writeInt(int p_writeInt_1_) {
+		return this.buf.writeInt(p_writeInt_1_);
 	}
 
 	@Override
-	public PacketBuffer writeIntLE(int p_writeIntLE_1_) {
-		this.buf.writeIntLE(p_writeIntLE_1_);
-		return this;
+	public ByteBuf writeIntLE(int p_writeIntLE_1_) {
+		return this.buf.writeIntLE(p_writeIntLE_1_);
 	}
 
 	@Override
-	public PacketBuffer writeLong(long p_writeLong_1_) {
-		this.buf.writeLong(p_writeLong_1_);
-		return this;
+	public ByteBuf writeLong(long p_writeLong_1_) {
+		return this.buf.writeLong(p_writeLong_1_);
 	}
 
 	@Override
-	public PacketBuffer writeLongLE(long p_writeLongLE_1_) {
-		this.buf.writeLongLE(p_writeLongLE_1_);
-		return this;
+	public ByteBuf writeLongLE(long p_writeLongLE_1_) {
+		return this.buf.writeLongLE(p_writeLongLE_1_);
 	}
 
 	@Override
-	public PacketBuffer writeChar(int p_writeChar_1_) {
-		this.buf.writeChar(p_writeChar_1_);
-		return this;
+	public ByteBuf writeChar(int p_writeChar_1_) {
+		return this.buf.writeChar(p_writeChar_1_);
 	}
 
 	@Override
-	public PacketBuffer writeFloat(float p_writeFloat_1_) {
-		this.buf.writeFloat(p_writeFloat_1_);
-		return this;
+	public ByteBuf writeFloat(float p_writeFloat_1_) {
+		return this.buf.writeFloat(p_writeFloat_1_);
 	}
 
 	@Override
-	public PacketBuffer writeDouble(double p_writeDouble_1_) {
-		this.buf.writeDouble(p_writeDouble_1_);
-		return this;
+	public ByteBuf writeDouble(double p_writeDouble_1_) {
+		return this.buf.writeDouble(p_writeDouble_1_);
 	}
 
 	@Override
-	public PacketBuffer writeBytes(ByteBuf p_writeBytes_1_) {
-		this.buf.writeBytes(p_writeBytes_1_);
-		return this;
+	public ByteBuf writeBytes(ByteBuf p_writeBytes_1_) {
+		return this.buf.writeBytes(p_writeBytes_1_);
 	}
 
 	@Override
-	public PacketBuffer writeBytes(ByteBuf p_writeBytes_1_, int p_writeBytes_2_) {
-		this.buf.writeBytes(p_writeBytes_1_, p_writeBytes_2_);
-		return this;
+	public ByteBuf writeBytes(ByteBuf p_writeBytes_1_, int p_writeBytes_2_) {
+		return this.buf.writeBytes(p_writeBytes_1_, p_writeBytes_2_);
 	}
 
 	@Override
-	public PacketBuffer writeBytes(ByteBuf p_writeBytes_1_, int p_writeBytes_2_, int p_writeBytes_3_) {
-		this.buf.writeBytes(p_writeBytes_1_, p_writeBytes_2_, p_writeBytes_3_);
-		return this;
+	public ByteBuf writeBytes(ByteBuf p_writeBytes_1_, int p_writeBytes_2_, int p_writeBytes_3_) {
+		return this.buf.writeBytes(p_writeBytes_1_, p_writeBytes_2_, p_writeBytes_3_);
 	}
 
 	@Override
-	public PacketBuffer writeBytes(byte[] p_writeBytes_1_) {
-		this.buf.writeBytes(p_writeBytes_1_);
-		return this;
+	public ByteBuf writeBytes(byte[] p_writeBytes_1_) {
+		return this.buf.writeBytes(p_writeBytes_1_);
 	}
 
 	@Override
-	public PacketBuffer writeBytes(byte[] p_writeBytes_1_, int p_writeBytes_2_, int p_writeBytes_3_) {
-		this.buf.writeBytes(p_writeBytes_1_, p_writeBytes_2_, p_writeBytes_3_);
-		return this;
+	public ByteBuf writeBytes(byte[] p_writeBytes_1_, int p_writeBytes_2_, int p_writeBytes_3_) {
+		return this.buf.writeBytes(p_writeBytes_1_, p_writeBytes_2_, p_writeBytes_3_);
 	}
 
 	@Override
-	public PacketBuffer writeBytes(ByteBuffer p_writeBytes_1_) {
-		this.buf.writeBytes(p_writeBytes_1_);
-		return this;
+	public ByteBuf writeBytes(ByteBuffer p_writeBytes_1_) {
+		return this.buf.writeBytes(p_writeBytes_1_);
 	}
 
 	@Override
@@ -1147,9 +1081,8 @@ public class PacketBuffer extends ByteBuf {
 	}
 
 	@Override
-	public PacketBuffer writeZero(int p_writeZero_1_) {
-		this.buf.writeZero(p_writeZero_1_);
-		return this;
+	public ByteBuf writeZero(int p_writeZero_1_) {
+		return this.buf.writeZero(p_writeZero_1_);
 	}
 
 	@Override

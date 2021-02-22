@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.SocketException;
 import java.util.Date;
 import java.util.UUID;
@@ -16,8 +17,6 @@ import com.sunflow.common.Connection;
 import com.sunflow.error.UnkownClassNameException;
 import com.sunflow.error.UnkownIdentifierException;
 import com.sunflow.util.Logger;
-
-import io.netty.buffer.ByteBuf;
 
 public class MessageBuffer<T> extends PacketBuffer {
 	private static final byte T_BOOL = 100;
@@ -45,9 +44,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 		}
 
 		@Override
-		public String toString() {
-			return getMessage().toString();
-		}
+		public String toString() { return getMessage().toString(); }
 
 		public Connection<T> getRemote() { return remote; }
 
@@ -65,7 +62,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 
 	public MessageBuffer(PacketBuffer origin) { super(origin); }
 
-	public MessageBuffer(ByteBuf wrapped) { super(wrapped); }
+//	public MessageBuffer(ByteBuf wrapped) { super(wrapped); }
 
 	public T getID() { return id; }
 
@@ -80,13 +77,13 @@ public class MessageBuffer<T> extends PacketBuffer {
 	public int write(OutputStream out) throws IOException {
 		BufferedOutputStream bout = new BufferedOutputStream(out);
 
-		Logger.debug("write header to outputstream");
+		Logger.net("write header to outputstream");
 		int headerSize = writeHeader(bout);
 
-		Logger.debug("write data to outputstream");
+		Logger.net("write data to outputstream");
 		int dataSize = writeData(bout);
 
-		Logger.debug("headerSize: " + headerSize + ", dataSize: " + dataSize);
+		Logger.net("headerSize: " + headerSize + ", dataSize: " + dataSize);
 
 		return headerSize + dataSize;
 	}
@@ -97,7 +94,8 @@ public class MessageBuffer<T> extends PacketBuffer {
 	protected int writeHeader(OutputStream out) throws IOException {
 		PacketBuffer header = new PacketBuffer();
 		writeID(header);
-		header.writeInt(writerIndex());
+		int dataSize = writerIndex();
+		header.writeInt(dataSize);
 		int headerSize = header.write(out);
 		out.flush();
 		return headerSize;
@@ -131,7 +129,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 		// Read in the message data
 		readData(bin, dataSize);
 
-		Logger.debug("Read Data Successfully");
+		Logger.net("Read Data Successfully");
 
 		// Return the message data size
 		return dataSize;
@@ -149,6 +147,8 @@ public class MessageBuffer<T> extends PacketBuffer {
 
 		int dataSize = readInt();
 		discardReadBytes();
+//		discardSomeReadBytes();
+//		clear();
 		return dataSize;
 	}
 
@@ -159,87 +159,64 @@ public class MessageBuffer<T> extends PacketBuffer {
 	 *             if the specified stream threw an exception during I/O
 	 */
 	void readData(InputStream in, int dataSize) throws IOException {
-		Logger.help("DS: " + dataSize);
+		Logger.net("DS: " + dataSize);
 		addData(in, dataSize);
-		Logger.help("Data arrived");
+		Logger.net("Data arrived");
 	}
 
 	void addData(InputStream in, int dataSize) throws IOException {
 		if (dataSize == 0) return;
-		int readBytes = readableBytes();
-		while (readBytes < dataSize) {
-			int _readBytes = writeBytes(in, dataSize - readBytes);
-			if (_readBytes == -1) throw new EOFException();
-			readBytes += _readBytes;
-//			Logger.debug("MessageBuffer", readBytes + "/" + dataSize + " - (" + _readBytes + ")");
+//		int readBytes = readableBytes();
+		int totalReadBytes = 0;
+		while (totalReadBytes < dataSize) {
+			int currentReadBytes = writeBytes(in, dataSize - totalReadBytes);
+			if (currentReadBytes == -1) throw new EOFException();
+			totalReadBytes += currentReadBytes;
+			Logger.net("MessageBuffer", totalReadBytes + "/" + dataSize + " - (" + currentReadBytes + ")");
 		}
 	}
 
 	protected void writeID(PacketBuffer idbuffer) {
-		if (id instanceof Boolean) {
-			idbuffer.writeByte(T_BOOL);
-			idbuffer.writeBoolean((boolean) id);
-		} else if (id instanceof Byte) {
-			idbuffer.writeByte(T_BYTE);
-			idbuffer.writeByte((byte) id);
-		} else if (id instanceof Short) {
-			idbuffer.writeByte(T_SHORT);
-			idbuffer.writeShort((short) id);
-		} else if (id instanceof Integer) {
-			idbuffer.writeByte(T_INT);
-			idbuffer.writeInt((int) id);
-		} else if (id instanceof Long) {
-			idbuffer.writeByte(T_LONG);
-			idbuffer.writeLong((long) id);
-		} else if (id instanceof Float) {
-			idbuffer.writeByte(T_FLOAT);
-			idbuffer.writeFloat((float) id);
-		} else if (id instanceof Double) {
-			idbuffer.writeByte(T_DOUBLE);
-			idbuffer.writeDouble((double) id);
-		} else if (id instanceof Character) {
-			idbuffer.writeByte(T_CHAR);
-			idbuffer.writeChar((int) id);
-		} else if (id instanceof String) {
-			idbuffer.writeByte(T_STRING);
-			idbuffer.writeString((String) id);
-		} else if (id instanceof Date) {
-			idbuffer.writeByte(T_TIME);
-			idbuffer.writeTime((Date) id);
-		} else if (id instanceof UUID) {
-			idbuffer.writeByte(T_UUID);
-			idbuffer.writeUniqueId((UUID) id);
-		} else if (id instanceof Enum<?>) {
+		// @formatter:off
+		if (id instanceof Boolean)  	  idbuffer.writeByte(T_BOOL)  .writeBoolean( (boolean) id);
+		else if (id instanceof Byte) 	  idbuffer.writeByte(T_BYTE)  .writeByte(	 (byte)	   id);
+		else if (id instanceof Short) 	  idbuffer.writeByte(T_SHORT) .writeShort(   (short)   id);
+		else if (id instanceof Integer)   idbuffer.writeByte(T_INT)   .writeInt(     (int) 	   id);
+		else if (id instanceof Long) 	  idbuffer.writeByte(T_LONG)  .writeLong(    (long)	   id);
+		else if (id instanceof Float) 	  idbuffer.writeByte(T_FLOAT) .writeFloat(   (float)   id);
+		else if (id instanceof Double)	  idbuffer.writeByte(T_DOUBLE).writeDouble(  (double)  id);
+		else if (id instanceof Character) idbuffer.writeByte(T_CHAR)  .writeChar(    (int) 	   id);
+		else if (id instanceof String) 	  idbuffer.writeByte(T_STRING).writeString(  (String)  id);
+		else if (id instanceof Date) 	  idbuffer.writeByte(T_TIME)  .writeTime(    (Date)	   id);
+		else if (id instanceof UUID) 	  idbuffer.writeByte(T_UUID)  .writeUniqueId((UUID)    id);
+		// @formatter:on
+		else if (id instanceof Enum<?>) {
 			idbuffer.writeByte(T_ENUM);
-			String idClazzName = id.getClass().getName();
-			byte[] idClazzNameBytes = idClazzName.getBytes();
-			idbuffer.writeVarInt(idClazzNameBytes.length);
-			idbuffer.writeBytes(idClazzName.getBytes());
+
+			idbuffer.writeString(id.getClass().getName());
 
 			idbuffer.writeEnumValue((Enum<?>) id);
 		} else if (id instanceof IIdentifier) {
 			idbuffer.writeByte(T_GEN);
 			idbuffer.writeVarInt(((IIdentifier) id).size());
 
-			String idClazzName = id.getClass().getName();
-			byte[] idClazzNameBytes = idClazzName.getBytes();
-			idbuffer.writeVarInt(idClazzNameBytes.length);
-			idbuffer.writeBytes(idClazzName.getBytes());
+			idbuffer.writeString(id.getClass().getName());
 
 			((IIdentifier) id).write(idbuffer);
-		} else {
-			throw new IllegalStateException("The Identifier " + id
-
-					+ " is of an unsupported type "
-					+ (id != null ? id.getClass() : "NULL"));
-		}
+		} else throw new IllegalStateException("The Identifier " + id
+				+ " is of an unsupported type "
+				+ (id != null ? id.getClass() : "NULL"));
 	}
 
 	private <E extends Enum<E>> void readID(InputStream in) throws IOException {
 		int idSize;
 		Supplier<Object> idSup;
-		byte type = readByteSafe(in);
+		int type = in.read();
 		switch (type) {
+			case -1:
+				throw new SocketException("Connection closed");
+			default:
+				throw new UnkownIdentifierException("" + type);
 			case T_BOOL:
 				idSize = Byte.BYTES;
 				idSup = this::readBoolean;
@@ -289,35 +266,31 @@ public class MessageBuffer<T> extends PacketBuffer {
 				idSize = Integer.BYTES;
 				String enumStr = readString(in);
 
-				@SuppressWarnings("unchecked")
-				Class<E> enumClazz;
 				try {
-					enumClazz = (Class<E>) Class.forName(enumStr);
+					@SuppressWarnings("unchecked")
+					Class<E> enumClazz = (Class<E>) Class.forName(enumStr);
+					idSup = () -> readEnumValue(enumClazz);
 				} catch (ClassNotFoundException e) {
-					throw new UnkownClassNameException(e);
+					throw new UnkownClassNameException("ClassName: '" + enumStr + "'", e);
 				}
-				idSup = () -> readEnumValue(enumClazz);
 				break;
 			case T_GEN:
 				idSize = readVarInt(in);
 				String genStr = readString(in);
 
 				System.out.println("NAME: " + genStr);
-				@SuppressWarnings("unchecked")
-				Class<IIdentifier> genClazz;
 				try {
-					genClazz = (Class<IIdentifier>) Class.forName(genStr);
+					@SuppressWarnings("unchecked")
+					Class<IIdentifier> genClazz = (Class<IIdentifier>) Class.forName(genStr);
+					idSup = () -> {
+						IIdentifier id = _getID(genClazz);
+						id.read(this);
+						return id;
+					};
 				} catch (ClassNotFoundException e) {
 					throw new UnkownClassNameException(e);
 				}
-				idSup = () -> {
-					IIdentifier id = _getID(genClazz);
-					id.read(this);
-					return id;
-				};
 				break;
-			default:
-				throw new UnkownIdentifierException("" + type);
 		}
 		int headerSize = idSize + Integer.BYTES;
 		addData(in, headerSize);
@@ -343,7 +316,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 				}
 			}
 			return ctor.newInstance(new Object[minLen]);
-		} catch (ReflectiveOperationException | IllegalArgumentException e) {
+		} catch (IllegalArgumentException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -376,185 +349,179 @@ public class MessageBuffer<T> extends PacketBuffer {
 		return i;
 	}
 
-	private static byte readByteSafe(InputStream in) throws IOException {
-		byte b = (byte) in.read();
-		if (b == -1) throw new SocketException("Connection closed");
-		return b;
-	}
-
 	public static <T> MessageBuffer<T> create(InputStream in) throws IOException {
 		MessageBuffer<T> message = new MessageBuffer<>();
 		message.read(in);
 		return message;
 	}
 
+	/* _ */
+	public static <E> MessageBuffer<E> create_(E id) { MessageBuffer<E> msg = create_(); msg.setID(id); return msg; }
+
+	public static <E> MessageBuffer<E> create_(E id, PacketBuffer origin) { MessageBuffer<E> msg = create_(origin); msg.setID(id); return msg; }
+
+//	public static <E> MessageBuffer<E> create_(E id, ByteBuf wrapper) { MessageBuffer<E> msg = create_(wrapper); msg.setID(id); return msg; }
+
+	public static <E> MessageBuffer<E> create_() { return new MessageBuffer<>(); }
+
+	public static <E> MessageBuffer<E> create_(PacketBuffer origin) { return new MessageBuffer<>(origin); }
+
+//	public static <E> MessageBuffer<E> create_(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+
 	/* Enum */
-	public static <E> MessageBuffer<E> createE(E id) { MessageBuffer<E> m = createE(); m.setID(id); return m; }
+	public static <E extends Enum<E>> MessageBuffer<E> create(E id) { MessageBuffer<E> msg = createEnum(); msg.setID(id); return msg; }
 
-	public static <E> MessageBuffer<E> createE(E id, PacketBuffer origin) { MessageBuffer<E> m = createE(origin); m.setID(id); return m; }
+	public static <E extends Enum<E>> MessageBuffer<E> create(E id, PacketBuffer origin) { MessageBuffer<E> msg = createEnum(origin); msg.setID(id); return msg; }
 
-	public static <E> MessageBuffer<E> createE(E id, ByteBuf wrapper) { MessageBuffer<E> m = createE(wrapper); m.setID(id); return m; }
-
-	public static <E> MessageBuffer<E> createE() { return new MessageBuffer<>(); }
-
-	public static <E> MessageBuffer<E> createE(PacketBuffer origin) { return new MessageBuffer<>(origin); }
-
-	public static <E> MessageBuffer<E> createE(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
-
-	/* Enum */
-	public static <E extends Enum<E>> MessageBuffer<E> create(E id) { MessageBuffer<E> m = createEnum(); m.setID(id); return m; }
-
-	public static <E extends Enum<E>> MessageBuffer<E> create(E id, PacketBuffer origin) { MessageBuffer<E> m = createEnum(origin); m.setID(id); return m; }
-
-	public static <E extends Enum<E>> MessageBuffer<E> create(E id, ByteBuf wrapper) { MessageBuffer<E> m = createEnum(wrapper); m.setID(id); return m; }
+//	public static <E extends Enum<E>> MessageBuffer<E> create(E id, ByteBuf wrapper) { MessageBuffer<E> msg = createEnum(wrapper); msg.setID(id); return msg; }
 
 	public static <E extends Enum<E>> MessageBuffer<E> createEnum() { return new MessageBuffer<>(); }
 
 	public static <E extends Enum<E>> MessageBuffer<E> createEnum(PacketBuffer origin) { return new MessageBuffer<E>(origin); }
 
-	public static <E extends Enum<E>> MessageBuffer<E> createEnum(ByteBuf wrapper) { return new MessageBuffer<E>(wrapper); }
+//	public static <E extends Enum<E>> MessageBuffer<E> createEnum(ByteBuf wrapper) { return new MessageBuffer<E>(wrapper); }
 
 	/* Boolean */
 	public static MessageBuffer<Boolean> create(boolean id) { return createBoolean().setID(id); }
 
 	public static MessageBuffer<Boolean> create(boolean id, PacketBuffer origin) { return createBoolean(origin).setID(id); }
 
-	public static MessageBuffer<Boolean> create(boolean id, ByteBuf wrapper) { return createBoolean(wrapper).setID(id); }
+//	public static MessageBuffer<Boolean> create(boolean id, ByteBuf wrapper) { return createBoolean(wrapper).setID(id); }
 
 	public static MessageBuffer<Boolean> createBoolean() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Boolean> createBoolean(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Boolean> createBoolean(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Boolean> createBoolean(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Byte */
 	public static MessageBuffer<Byte> create(byte id) { return createByte().setID(id); }
 
 	public static MessageBuffer<Byte> create(byte id, PacketBuffer origin) { return createByte(origin).setID(id); }
 
-	public static MessageBuffer<Byte> create(byte id, ByteBuf wrapper) { return createByte(wrapper).setID(id); }
+//	public static MessageBuffer<Byte> create(byte id, ByteBuf wrapper) { return createByte(wrapper).setID(id); }
 
 	public static MessageBuffer<Byte> createByte() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Byte> createByte(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Byte> createByte(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Byte> createByte(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Short */
 	public static MessageBuffer<Short> create(short id) { return createShort().setID(id); }
 
 	public static MessageBuffer<Short> create(short id, PacketBuffer origin) { return createShort(origin).setID(id); }
 
-	public static MessageBuffer<Short> create(short id, ByteBuf wrapper) { return createShort(wrapper).setID(id); }
+//	public static MessageBuffer<Short> create(short id, ByteBuf wrapper) { return createShort(wrapper).setID(id); }
 
 	public static MessageBuffer<Short> createShort() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Short> createShort(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Short> createShort(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Short> createShort(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Integer */
 	public static MessageBuffer<Integer> create(int id) { return createInteger().setID(id); }
 
 	public static MessageBuffer<Integer> create(int id, PacketBuffer origin) { return createInteger(origin).setID(id); }
 
-	public static MessageBuffer<Integer> create(int id, ByteBuf wrapper) { return createInteger(wrapper).setID(id); }
+//	public static MessageBuffer<Integer> create(int id, ByteBuf wrapper) { return createInteger(wrapper).setID(id); }
 
 	public static MessageBuffer<Integer> createInteger() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Integer> createInteger(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Integer> createInteger(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Integer> createInteger(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Long */
 	public static MessageBuffer<Long> create(long id) { return createLong().setID(id); }
 
 	public static MessageBuffer<Long> create(long id, PacketBuffer origin) { return createLong(origin).setID(id); }
 
-	public static MessageBuffer<Long> create(long id, ByteBuf wrapper) { return createLong(wrapper).setID(id); }
+//	public static MessageBuffer<Long> create(long id, ByteBuf wrapper) { return createLong(wrapper).setID(id); }
 
 	public static MessageBuffer<Long> createLong() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Long> createLong(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Long> createLong(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Long> createLong(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Float */
 	public static MessageBuffer<Float> create(float id) { return createFloat().setID(id); }
 
 	public static MessageBuffer<Float> create(float id, PacketBuffer origin) { return createFloat(origin).setID(id); }
 
-	public static MessageBuffer<Float> create(float id, ByteBuf wrapper) { return createFloat(wrapper).setID(id); }
+//	public static MessageBuffer<Float> create(float id, ByteBuf wrapper) { return createFloat(wrapper).setID(id); }
 
 	public static MessageBuffer<Float> createFloat() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Float> createFloat(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Float> createFloat(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Float> createFloat(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Double */
 	public static MessageBuffer<Double> create(double id) { return createDouble().setID(id); }
 
 	public static MessageBuffer<Double> create(double id, PacketBuffer origin) { return createDouble(origin).setID(id); }
 
-	public static MessageBuffer<Double> create(double id, ByteBuf wrapper) { return createDouble(wrapper).setID(id); }
+//	public static MessageBuffer<Double> create(double id, ByteBuf wrapper) { return createDouble(wrapper).setID(id); }
 
 	public static MessageBuffer<Double> createDouble() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Double> createDouble(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Double> createDouble(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Double> createDouble(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Character */
 	public static MessageBuffer<Character> create(char id) { return createCharacter().setID(id); }
 
 	public static MessageBuffer<Character> create(char id, PacketBuffer origin) { return createCharacter(origin).setID(id); }
 
-	public static MessageBuffer<Character> create(char id, ByteBuf wrapper) { return createCharacter(wrapper).setID(id); }
+//	public static MessageBuffer<Character> create(char id, ByteBuf wrapper) { return createCharacter(wrapper).setID(id); }
 
 	public static MessageBuffer<Character> createCharacter() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Character> createCharacter(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Character> createCharacter(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Character> createCharacter(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Time */
 	public static MessageBuffer<Date> create(Date id) { return createTime().setID(id); }
 
 	public static MessageBuffer<Date> create(Date id, PacketBuffer origin) { return createTime(origin).setID(id); }
 
-	public static MessageBuffer<Date> create(Date id, ByteBuf wrapper) { return createTime(wrapper).setID(id); }
+//	public static MessageBuffer<Date> create(Date id, ByteBuf wrapper) { return createTime(wrapper).setID(id); }
 
 	public static MessageBuffer<Date> createTime() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<Date> createTime(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<Date> createTime(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<Date> createTime(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* UUID */
 	public static MessageBuffer<UUID> create(UUID id) { return createUUID().setID(id); }
 
 	public static MessageBuffer<UUID> create(UUID id, PacketBuffer origin) { return createUUID(origin).setID(id); }
 
-	public static MessageBuffer<UUID> create(UUID id, ByteBuf wrapper) { return createUUID(wrapper).setID(id); }
+//	public static MessageBuffer<UUID> create(UUID id, ByteBuf wrapper) { return createUUID(wrapper).setID(id); }
 
 	public static MessageBuffer<UUID> createUUID() { return new MessageBuffer<>(); }
 
 	public static MessageBuffer<UUID> createUUID(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static MessageBuffer<UUID> createUUID(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static MessageBuffer<UUID> createUUID(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 	/* Generic */
-	public static <D extends IIdentifier> MessageBuffer<D> create(D id) { MessageBuffer<D> m = createGeneric(); m.setID(id); return m; }
+	public static <D extends IIdentifier> MessageBuffer<D> create(D id) { MessageBuffer<D> msg = createGeneric(); msg.setID(id); return msg; }
 
-	public static <D extends IIdentifier> MessageBuffer<D> create(D id, PacketBuffer origin) { MessageBuffer<D> m = createGeneric(origin); m.setID(id); return m; }
+	public static <D extends IIdentifier> MessageBuffer<D> create(D id, PacketBuffer origin) { MessageBuffer<D> msg = createGeneric(origin); msg.setID(id); return msg; }
 
-	public static <D extends IIdentifier> MessageBuffer<D> create(D id, ByteBuf wrapper) { MessageBuffer<D> m = createGeneric(wrapper); m.setID(id); return m; }
+//	public static <D extends IIdentifier> MessageBuffer<D> create(D id, ByteBuf wrapper) { MessageBuffer<D> msg = createGeneric(wrapper); msg.setID(id); return msg; }
 
 	public static <D extends IIdentifier> MessageBuffer<D> createGeneric() { return new MessageBuffer<>(); }
 
 	public static <D extends IIdentifier> MessageBuffer<D> createGeneric(PacketBuffer origin) { return new MessageBuffer<>(origin); }
 
-	public static <D extends IIdentifier> MessageBuffer<D> createGeneric(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
+//	public static <D extends IIdentifier> MessageBuffer<D> createGeneric(ByteBuf wrapper) { return new MessageBuffer<>(wrapper); }
 
 }
