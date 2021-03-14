@@ -1,5 +1,6 @@
 package com.sunflow.message;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -23,6 +24,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 
 public class PacketBuffer extends ByteBuf {
+
+	private static long ID = 0;
+	private long id = ID++;
+
+	public long id() { return id; }
 
 	private final ByteBuf buf;
 
@@ -84,9 +90,28 @@ public class PacketBuffer extends ByteBuf {
 		return read(in, in.available());
 	}
 
-	public int read(InputStream in, int amount) throws IOException {
+	public int readUnsafe(InputStream in, int amount) throws IOException {
 		return writeBytes(in, amount);
 	}
+
+	public int read(InputStream in, int amount) throws IOException {
+		long s = System.nanoTime();
+		for (int i = 0; i < amount; i++) {
+			int b = in.read();
+			if (b == -1) throw new EOFException();
+			writeByte(b);
+		}
+		return amount;
+	}
+//	public int read(InputStream in, int amount) throws IOException {
+//		int totalReadBytes = 0;
+//		while (totalReadBytes < amount) {
+//			int currentReadBytes = writeBytes(in, amount - totalReadBytes);
+//			if (currentReadBytes == -1) throw new EOFException();
+//			totalReadBytes += currentReadBytes;
+//			Logger.net("MessageBuffer", totalReadBytes + "/" + amount + " - (" + currentReadBytes + ")");
+//		}
+//	}
 
 	public int set(InputStream in) throws IOException {
 		return setBytes(0, in, in.available());

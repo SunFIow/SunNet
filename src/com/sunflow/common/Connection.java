@@ -1,6 +1,7 @@
 package com.sunflow.common;
 
 import java.net.Socket;
+import java.util.HashSet;
 import java.util.function.Supplier;
 
 import com.sunflow.error.DisconnectException;
@@ -109,14 +110,14 @@ public class Connection<T> {
 //			// A client has attempted to connect to the server, but we wish
 //			// the client to first validate itself, so first write out the
 //			// handshake data to be validated
-//			writeValidation();
+			writeValidation();
 //
 //			// Next, issue a task to sit and wait asynchronously for precisely
 //			// the validation data sent back from the client
-//			readValidation(server);
+			readValidation(server);
 
-			server.onClientValidated(this);
-			readMessage();
+//			server.onClientValidated(this);
+//			readMessage();
 		}
 	}
 
@@ -130,16 +131,23 @@ public class Connection<T> {
 
 			// First thing server will do is send packet to be validated
 			// so wait for that and respond
-//			readValidation();
-			readMessage();
+			readValidation();
+//			readMessage();
 		}
 	}
 
 	public void disconnect() {
-		m_context.async_task(m_nOwnerType + "_connection_disconnect", () -> {
+//		m_context.async_task(m_nOwnerType + "_connection_disconnect", () -> {
+//			m_socket.close();
+////			m_context.stop();
+//		}, error -> Logger.error(m_nOwnerType + "-Connection", "(" + id + "): ", new DisconnectException("", error)));
+
+		if (!isConnected()) return;
+		m_context.task(m_nOwnerType + "_connection_disconnect", () -> {
 			m_socket.close();
-//			m_context.stop();
+//				m_context.stop();
 		}, error -> Logger.error(m_nOwnerType + "-Connection", "(" + id + "): ", new DisconnectException("", error)));
+
 	}
 
 	public boolean isConnected() { return !m_socket.isClosed() && m_socket.isConnected(); }
@@ -149,6 +157,7 @@ public class Connection<T> {
 	 *        the target, for a client, the target is the server and vice versa
 	 */
 	public void send(PacketBuffer msg) {
+//		Logger.help("send:" + msg);
 		m_context.post(m_nOwnerType + "_connection_send", () -> {
 			/*
 			 * If the queue has a message in it, then we must
@@ -166,11 +175,31 @@ public class Connection<T> {
 	/**
 	 * @ASYNC Prime context ready to write a message
 	 */
+	private int writing = 0;
+	private HashSet<Long> ids = new HashSet<>();
+
 	private void writeMessage() {
-		m_context.async_write(m_socket, m_qMessagesOut.front(), (wroteBytes) -> {
-			Logger.net(Thread.currentThread(), "Wrote Message of length " + wroteBytes + ": " + m_qMessagesOut.front());
+		writing++;
+//		System.out.println("msgs_out: " + m_qMessagesOut.count());
+//		PacketBuffer msg = m_qMessagesOut.pop_front();
+		PacketBuffer msg = m_qMessagesOut.front();
+		if (ids.contains(msg.id())) System.out.println("Already Sent(" + msg.id() + ")");
+		else ids.add(msg.id());
+//		if (msg == null) {
+//			System.out.println("UOPPSI");
+//			return;
+//		}
+//		m_context.async_write(m_socket, msg, (wroteBytes) -> {
+		m_context.async_write(m_socket, msg, (wroteBytes) -> {
+//		m_context.write(m_socket, msg, (wroteBytes) -> {
+			Logger.net(Thread.currentThread(), "Wrote Message of length " + wroteBytes + ": " + msg);
 			// A complete message has been written
-			m_qMessagesOut.pop_front();
+			PacketBuffer pb = m_qMessagesOut.pop_front();
+			if (msg != pb) {
+				System.out.println("FLASE(" + writing + "): " + (msg != null ? msg.id() : "NULL") + " / " + (pb != null ? pb.id() : "NULL"));
+			}
+//			System.out.println(msg == m_qMessagesOut.pop_front());
+			writing--;
 			if (!m_qMessagesOut.empty()) {
 				writeMessage();
 			}
@@ -180,15 +209,22 @@ public class Connection<T> {
 			// ... so disconnect it
 			disconnect();
 		});
+//		try {
+//			Thread.sleep(1);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 	/**
 	 * @ASYNC Prime context ready to read a message
 	 */
 	private void readMessage() {
+//		System.out.println("msgs_in: " + m_qMessagesIn.count());
 		MessageBuffer<T> msg = messageFactory.get();
 //		MessageBuffer<T> msg = new MessageBuffer<>();
 		m_context.async_read(m_socket, msg, (readBytes) -> {
+//		m_context.read(m_socket, msg, (readBytes) -> {
 			// A complete message has been read
 			Logger.net(Thread.currentThread(), "Read Message of length " + readBytes + ": " + msg);
 			addToIncomingMessageQueue(msg);
@@ -217,6 +253,8 @@ public class Connection<T> {
 		PacketBuffer val_msg = new PacketBuffer();
 		val_msg.writeLong(m_nHandshakeOut);
 		m_context.async_write(m_socket, val_msg, (wroteBytes) -> {
+//		m_context.write(m_socket, val_msg, (wroteBytes) -> {
+			Logger.help("wrote val msg: " + val_msg);
 			// Validation data sent, clients should sit and wait
 			// for a response (or a closure)
 			if (m_nOwnerType == Side.Client) readMessage();
@@ -232,7 +270,10 @@ public class Connection<T> {
 
 	// ASYNC - Used by both client and server to read validation packet
 	private void readValidation(Server<T> server) {
-		m_context.async_read(m_socket, Long.BYTES + 20, (val_msg, readBytes) -> {
+		PacketBuffer val_msg = new PacketBuffer();
+		m_context.async_read(m_socket, val_msg, Long.BYTES, (readBytes) -> {
+//		m_context.read(m_socket, val_msg, Long.BYTES, (readBytes) -> {
+			Logger.help("recieved val msg: " + val_msg);
 			m_nHandshakeIn = val_msg.readLong();
 			if (m_nOwnerType == Side.Server) {
 				if (m_nHandshakeIn == m_nHandshakeCheck) {
@@ -249,6 +290,7 @@ public class Connection<T> {
 					disconnect();
 				}
 			} else {
+				Logger.help("solving puzzle");
 				// Connection is a client, so solve puzzle
 				m_nHandshakeOut = scramble(m_nHandshakeIn);
 

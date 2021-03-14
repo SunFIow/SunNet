@@ -144,13 +144,11 @@ public class Client<T> extends Interface<T> {
 	 * Check if client is actually connected to a server
 	 */
 	public boolean isConnected() {
-		if (m_connection != null) return m_connection.isConnected();
-		else return false;
+		return m_connection != null && m_connection.isConnected();
 	}
 
 	public void send(PacketBuffer msg) {
-		if (isConnected())
-			m_connection.send(msg);
+		if (isConnected()) m_connection.send(msg);
 	}
 
 	@Override

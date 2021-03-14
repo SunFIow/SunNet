@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.function.Supplier;
 
 import com.sunflow.common.Connection;
@@ -309,12 +310,14 @@ public class Server<T> extends Interface<T> {
 	 *            The client to ignore, null to send to everybody
 	 */
 	public void messageAllClients(MessageBuffer<T> msg, Connection<T> ignoreClient) {
+//		System.out.println(m_deqConnections.size());
 		for (Connection<T> client : m_deqConnections) {
+//		for (Iterator<Connection<T>> iterator = m_deqConnections.descendingIterator(); iterator.hasNext();) {
+//			Connection<T> client = iterator.next();
 			// Check client is connected...
 			if (client != null && client.isConnected()) {
 				// Check that it's not the client we want to ignore
-				if (client != ignoreClient)
-					client.send(msg);
+				if (client != ignoreClient) client.send(msg);
 			} else {
 				// The client couldn't be contacted, so assume it has disconnected.
 				clientNotConnected(client);
@@ -331,14 +334,40 @@ public class Server<T> extends Interface<T> {
 	 *            The client to ignore, null to send to everybody
 	 */
 	public void messageAllClients(MessageBuffer<T> msg, Connection<T>... ignoreClients) {
-		for (Connection<T> client : m_deqConnections) {
+//		System.out.println(m_deqConnections.size());
+//		for (Connection<T> client : m_deqConnections) {
+		for (Iterator<Connection<T>> iterator = m_deqConnections.descendingIterator(); iterator.hasNext();) {
+			Connection<T> client = iterator.next();
 			// Check client is connected...
 			if (client != null && client.isConnected()) {
 				// Check that it's not the client we want to ignore
 				boolean ignore = false;
-				for (Connection<T> ignoreClient : ignoreClients) if (client == ignoreClient) ignore = true;
-				if (!ignore)
-					client.send(msg);
+				for (Connection<T> ignoreClient : ignoreClients) if (client == ignoreClient) {
+					ignore = true;
+					break;
+				}
+				if (!ignore) client.send(msg);
+			} else {
+				// The client couldn't be contacted, so assume it has disconnected.
+				clientNotConnected(client);
+			}
+		}
+	}
+
+	public void messageOnlyClients(MessageBuffer<T> msg, Connection<T>... clients) {
+//		System.out.println(m_deqConnections.size());
+//		for (Connection<T> client : m_deqConnections) {
+		for (Iterator<Connection<T>> iterator = m_deqConnections.descendingIterator(); iterator.hasNext();) {
+			Connection<T> client = iterator.next();
+			// Check client is connected...
+			if (client != null && client.isConnected()) {
+				// Check that it's not the client we want to ignore
+				boolean send = false;
+				for (Connection<T> ignoreClient : clients) if (client == ignoreClient) {
+					send = true;
+					break;
+				}
+				if (send) client.send(msg);
 			} else {
 				// The client couldn't be contacted, so assume it has disconnected.
 				clientNotConnected(client);

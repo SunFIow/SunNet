@@ -2,13 +2,13 @@ package com.sunflow.message;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -16,7 +16,10 @@ import java.util.function.Supplier;
 import com.sunflow.common.Connection;
 import com.sunflow.error.UnkownClassNameException;
 import com.sunflow.error.UnkownIdentifierException;
+import com.sunflow.error.netty.DecoderException;
 import com.sunflow.util.Logger;
+
+import io.netty.buffer.ByteBuf;
 
 public class MessageBuffer<T> extends PacketBuffer {
 	private static final byte T_BOOL = 100;
@@ -62,7 +65,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 
 	public MessageBuffer(PacketBuffer origin) { super(origin); }
 
-//	public MessageBuffer(ByteBuf wrapped) { super(wrapped); }
+	public MessageBuffer(ByteBuf wrapped) { super(wrapped); }
 
 	public T getID() { return id; }
 
@@ -77,13 +80,17 @@ public class MessageBuffer<T> extends PacketBuffer {
 	public int write(OutputStream out) throws IOException {
 		BufferedOutputStream bout = new BufferedOutputStream(out);
 
-		Logger.net("write header to outputstream");
+		Logger.net("MessageBuffer", "write header to outputstream");
+//		System.out.println("--- ---");
 		int headerSize = writeHeader(bout);
 
-		Logger.net("write data to outputstream");
+		Logger.net("MessageBuffer", "write data to outputstream");
+//		System.out.println("---");
 		int dataSize = writeData(bout);
 
-		Logger.net("headerSize: " + headerSize + ", dataSize: " + dataSize);
+		Logger.net("MessageBuffer", "headerSize: " + headerSize + ", dataSize: " + dataSize);
+
+		bout.flush();
 
 		return headerSize + dataSize;
 	}
@@ -91,13 +98,13 @@ public class MessageBuffer<T> extends PacketBuffer {
 	/**
 	 * @return byte size of the message header
 	 */
-	protected int writeHeader(OutputStream out) throws IOException {
+	int writeHeader(OutputStream out) throws IOException {
 		PacketBuffer header = new PacketBuffer();
 		writeID(header);
 		int dataSize = writerIndex();
 		header.writeInt(dataSize);
 		int headerSize = header.write(out);
-		out.flush();
+//		out.flush();
 		return headerSize;
 	}
 
@@ -106,7 +113,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 	 */
 	int writeData(OutputStream out) throws IOException {
 		int dataSize = super.write(out);
-		out.flush();
+//		out.flush();
 		return dataSize;
 	}
 
@@ -123,17 +130,37 @@ public class MessageBuffer<T> extends PacketBuffer {
 	public int read(InputStream in) throws IOException {
 		BufferedInputStream bin = new BufferedInputStream(in);
 
+		int av0 = in.available();
+		mb = 0;
+
 		// Read in the message header
+//		System.out.println("### ###");
 		int dataSize = readHeader(bin);
 
 		// Read in the message data
+//		System.out.println("###");
+//		if (dataSize > 0)
 		readData(bin, dataSize);
 
-		Logger.net("Read Data Successfully");
+		Logger.net("MessageBuffer", "Read Data Successfully");
 
+		int av1 = in.available();
+
+//		Logger.info(av0 + " --- " + av1 + " ( " + mb + ")");
+		if (av0 > 84) {
+			if (av0 == 168) {
+				lost++;
+			} else {
+				lost2++;
+			}
+		}
 		// Return the message data size
 		return dataSize;
 	}
+
+	int mb;
+	public static long lost = 0;
+	public static long lost2 = 0;
 
 	/**
 	 * Reads in the message header from the InputStream
@@ -146,9 +173,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 		readID(in);
 
 		int dataSize = readInt();
-		discardReadBytes();
-//		discardSomeReadBytes();
-//		clear();
+		clear();
 		return dataSize;
 	}
 
@@ -158,23 +183,24 @@ public class MessageBuffer<T> extends PacketBuffer {
 	 * @throws IOException
 	 *             if the specified stream threw an exception during I/O
 	 */
-	void readData(InputStream in, int dataSize) throws IOException {
-		Logger.net("DS: " + dataSize);
-		addData(in, dataSize);
-		Logger.net("Data arrived");
+	private void readData(InputStream in, int dataSize) throws IOException {
+		Logger.net("MessageBuffer", "DS: " + dataSize);
+//		addData(in, dataSize);
+		mb += dataSize;
+		read(in, dataSize);
+		Logger.net("MessageBuffer", "Data arrived");
 	}
 
-	void addData(InputStream in, int dataSize) throws IOException {
-		if (dataSize == 0) return;
-//		int readBytes = readableBytes();
-		int totalReadBytes = 0;
-		while (totalReadBytes < dataSize) {
-			int currentReadBytes = writeBytes(in, dataSize - totalReadBytes);
-			if (currentReadBytes == -1) throw new EOFException();
-			totalReadBytes += currentReadBytes;
-			Logger.net("MessageBuffer", totalReadBytes + "/" + dataSize + " - (" + currentReadBytes + ")");
-		}
-	}
+//	private void addData(InputStream in, int dataSize) throws IOException {
+////		int totalReadBytes = readableBytes();
+//		int totalReadBytes = 0;
+//		while (totalReadBytes < dataSize) {
+//			int currentReadBytes = writeBytes(in, dataSize - totalReadBytes);
+//			if (currentReadBytes == -1) throw new EOFException();
+//			totalReadBytes += currentReadBytes;
+//			Logger.net("MessageBuffer", totalReadBytes + "/" + dataSize + " - (" + currentReadBytes + ")");
+//		}
+//	}
 
 	protected void writeID(PacketBuffer idbuffer) {
 		// @formatter:off
@@ -211,6 +237,7 @@ public class MessageBuffer<T> extends PacketBuffer {
 	private <E extends Enum<E>> void readID(InputStream in) throws IOException {
 		int idSize;
 		Supplier<Object> idSup;
+		mb += 1;
 		int type = in.read();
 		switch (type) {
 			case -1:
@@ -293,7 +320,8 @@ public class MessageBuffer<T> extends PacketBuffer {
 				break;
 		}
 		int headerSize = idSize + Integer.BYTES;
-		addData(in, headerSize);
+		mb += headerSize;
+		read(in, headerSize);
 
 		@SuppressWarnings("unchecked")
 		T cid = (T) idSup.get();
@@ -322,19 +350,43 @@ public class MessageBuffer<T> extends PacketBuffer {
 		return null;
 	}
 
-	private static String readString(InputStream in) throws IOException {
-		int length = readVarInt(in);
-		byte[] bytes = new byte[length];
-		int alength = in.read(bytes);
-		assert length == alength;
-		return new String(bytes);
+	private String readString(InputStream in) throws IOException {
+//		int length = readVarInt(in);
+//		byte[] bytes = new byte[length];
+//		int alength = in.read(bytes);
+//		assert length == alength;
+//		return new String(bytes);
+		int maxLength = 32767;
+		int i = readVarInt(in);
+		mb += i;
+//		int i = in.read();
+		if (i > maxLength * 4) {
+			throw new DecoderException("The received encoded string buffer length is longer than maximum allowed (" + i + " > " + maxLength * 4 + ")");
+		} else if (i < 0) {
+			throw new DecoderException("The received encoded string buffer length is less than zero! Weird string!");
+		} else {
+//			String s = this.toString(super.readerIndex(), i, StandardCharsets.UTF_8);
+//			this.readerIndex(this.readerIndex() + i);
+
+			byte[] array = new byte[i];
+			int alength = in.read(array);
+			if (i != alength) throw new IOException("Read In Wrong String Size [" + alength + "/" + i + "]");
+			String s = new String(array, 0, i, StandardCharsets.UTF_8);
+
+			if (s.length() > maxLength) {
+				throw new DecoderException("The received string length is longer than maximum allowed (" + i + " > " + maxLength + ")");
+			} else {
+				return s;
+			}
+		}
 	}
 
-	private static int readVarInt(InputStream in) throws IOException {
+	private int readVarInt(InputStream in) throws IOException {
 		int i = 0;
 		int j = 0;
 
 		while (true) {
+			mb += 1;
 			byte b0 = (byte) in.read();
 			i |= (b0 & 127) << j++ * 7;
 			if (j > 5) {

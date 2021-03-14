@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -26,6 +25,27 @@ public abstract class CommonContext implements Runnable, Closeable {
 
 	private TSQueue<Thread> taskThread_queue;
 	private TSQueueImpl<Thread> taskThreads;
+
+//	private InputStream input;
+//	private OutputStream output;
+//	private HashMap<Socket, InputStream> inputs = new HashMap<>();
+//	private HashMap<Socket, OutputStream> outputs = new HashMap<>();
+
+	private InputStream getInputStream(Socket socket) throws IOException {
+		return socket.getInputStream();
+//		if (!inputs.containsKey(socket)) {
+//			inputs.put(socket, socket.getInputStream());
+//		}
+//		return inputs.get(socket);
+	}
+
+	private OutputStream getOutputStream(Socket socket) throws IOException {
+		return socket.getOutputStream();
+//		if (!outputs.containsKey(socket)) {
+//			outputs.put(socket, socket.getOutputStream());
+//		}
+//		return outputs.get(socket);
+	}
 
 	public CommonContext(Side side) { this(side, null); }
 
@@ -84,6 +104,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 	public void write(Socket socket, PacketBuffer buffer,
 			Consumer<Integer> successConsumer, Consumer<Exception> errorConsumer) {
 		task(side + "_context_write", () -> {
+//			OutputStream out = getOutputStream(socket);
 			OutputStream out = socket.getOutputStream();
 			int wroteBytes = buffer.write(out);
 			successConsumer.accept(wroteBytes);
@@ -93,6 +114,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 	public void async_write(Socket socket, PacketBuffer buffer,
 			Consumer<Integer> successConsumer, Consumer<Exception> errorConsumer) {
 		async_task(side + "_context_async_write", () -> {
+//			OutputStream out = getOutputStream(socket);
 			OutputStream out = socket.getOutputStream();
 			int wroteBytes = buffer.write(out);
 			successConsumer.accept(wroteBytes);
@@ -102,6 +124,7 @@ public abstract class CommonContext implements Runnable, Closeable {
 	public void read(Socket socket, PacketBuffer buffer,
 			Consumer<Integer> messageConsumer, Consumer<Exception> errorConsumer) {
 		task(side + "_context_read", () -> {
+//			InputStream in = getInputStream(socket);
 			InputStream in = socket.getInputStream();
 			int readBytes = buffer.read(in);
 			messageConsumer.accept(readBytes);
@@ -111,19 +134,30 @@ public abstract class CommonContext implements Runnable, Closeable {
 	public void async_read(Socket socket, PacketBuffer buffer,
 			Consumer<Integer> messageConsumer, Consumer<Exception> errorConsumer) {
 		async_task(side + "_context_async_read", () -> {
+//			InputStream in = getInputStream(socket);
 			InputStream in = socket.getInputStream();
 			int readBytes = buffer.read(in);
 			messageConsumer.accept(readBytes);
 		}, errorConsumer);
 	}
 
-	public void async_read(Socket socket, int size,
-			BiConsumer<PacketBuffer, Integer> messageConsumer, Consumer<Exception> errorConsumer) {
-		async_task(side + "_context_async_read", () -> {
+	public void read(Socket socket, PacketBuffer buffer, int size,
+			Consumer<Integer> messageConsumer, Consumer<Exception> errorConsumer) {
+		task(side + "_context_read", () -> {
+//			InputStream in = getInputStream(socket);
 			InputStream in = socket.getInputStream();
-			PacketBuffer buffer = new PacketBuffer();
 			int readBytes = buffer.read(in, size);
-			messageConsumer.accept(buffer, readBytes);
+			messageConsumer.accept(readBytes);
+		}, errorConsumer);
+	}
+
+	public void async_read(Socket socket, PacketBuffer buffer, int size,
+			Consumer<Integer> messageConsumer, Consumer<Exception> errorConsumer) {
+		async_task(side + "_context_async_read", () -> {
+//			InputStream in = getInputStream(socket);
+			InputStream in = socket.getInputStream();
+			int readBytes = buffer.read(in, size);
+			messageConsumer.accept(readBytes);
 		}, errorConsumer);
 	}
 
